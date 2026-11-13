@@ -1,0 +1,3574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>星座図鑑（せいざずかん）</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 小学生にも読みやすい丸ゴシックフォント -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'M PLUS Rounded 1c', 'Inter', sans-serif;
+      background-color: #060b19;
+      color: #f8fafc;
+      touch-action: manipulation;
+    }
+
+    /* 夜空背景グラデーション */
+    .night-sky-bg {
+      background: radial-gradient(ellipse at 50% 35%, #132347 0%, #091126 55%, #040814 100%);
+    }
+
+    /* ガラスモーフィズムUI */
+    .glass-panel {
+      background: rgba(13, 24, 52, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 197, 255, 0.25);
+    }
+
+    /* ルビ（ふりがな）のスタイル調整 */
+    ruby rt {
+      font-size: 0.62em;
+      color: #93c5fd;
+      font-weight: 500;
+    }
+
+    /* 入力ミス時のシェイクアニメーション */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .animate-shake {
+      animation: shake 0.32s ease-in-out;
+    }
+
+    /* 文字確定時のポップアニメーション */
+    @keyframes popIn {
+      0% { transform: scale(0.65); opacity: 0.4; }
+      70% { transform: scale(1.18); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* 星座名正解時に星座名の位置に出る「○」アニメーション */
+    @keyframes nameCircleStamp {
+      0% { transform: translate(-50%, -50%) scale(1.9); opacity: 0; }
+      55% { transform: translate(-50%, -50%) scale(0.92); opacity: 1; }
+      80% { transform: translate(-50%, -50%) scale(1.04); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 0.92; }
+    }
+    .animate-name-circle {
+      animation: nameCircleStamp 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* カーソル点滅 */
+    @keyframes pulseBorder {
+      0%, 100% { border-color: rgba(250, 204, 21, 0.95); box-shadow: 0 0 12px rgba(250, 204, 21, 0.45); }
+      50% { border-color: rgba(250, 204, 21, 0.35); box-shadow: 0 0 4px rgba(250, 204, 21, 0.1); }
+    }
+    .active-char-slot {
+      animation: pulseBorder 1.3s infinite;
+    }
+
+    /* フリックキーのスタイル */
+    .flick-key {
+      position: relative;
+      touch-action: none;
+      transition: transform 0.06s ease, background-color 0.1s ease;
+    }
+    #star-canvas {
+      touch-action: none;
+    }
+    .flick-key:active, .flick-key.is-pressed {
+      transform: scale(0.95);
+      background-color: rgba(59, 130, 246, 0.45);
+    }
+
+    /* カスタムスクロールバー */
+    .zukan-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .zukan-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 9999px;
+    }
+    .zukan-scroll::-webkit-scrollbar-thumb {
+      background: rgba(96, 165, 250, 0.4);
+      border-radius: 9999px;
+    }
+    .zukan-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(96, 165, 250, 0.65);
+    }
+  </style>
+</head>
+<body class="night-sky-bg select-none">
+
+  <!-- =========================================================
+       画面1：星座図鑑（ホーム＆コレクション画面）
+       ========================================================= -->
+  <div id="view-zukan" class="w-full h-full flex flex-col">
+    <!-- ヘッダー -->
+    <header class="w-full px-4 sm:px-6 py-3 glass-panel border-b border-blue-400/20 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-300 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20 text-slate-900 font-extrabold text-xl">
+          ★
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-extrabold tracking-wide text-white">
+            星座図鑑（せいざずかん）
+          </h1>
+          <p class="text-xs text-blue-200">すきな せいざを えらんで ほしを つなごう！</p>
+        </div>
+      </div>
+
+      <!-- 進捗メーター -->
+      <div class="flex items-center gap-4 bg-slate-900/70 px-4 py-2 rounded-2xl border border-blue-400/25">
+        <div class="text-right">
+          <div class="text-xs text-blue-200 font-bold">あつめた せいざ</div>
+          <div class="text-base sm:text-lg font-extrabold text-amber-300">
+            <span id="zukan-count">0</span> <span class="text-xs text-slate-300">/ <span id="zukan-total-count">32</span> こ</span>
+          </div>
+        </div>
+        <div class="w-28 sm:w-40 h-3.5 bg-slate-800 rounded-full overflow-hidden border border-slate-600/60">
+          <div id="zukan-progress-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-emerald-400 transition-all duration-500 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 季節・分類フィルタータブ -->
+    <nav class="w-full px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto shrink-0 bg-slate-950/40 border-b border-blue-400/15">
+      <button data-filter="all" id="filter-btn-all" class="filter-btn active px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-blue-500 text-white shadow transition shrink-0">
+        すべて (32)
+      </button>
+      <button data-filter="rika" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-amber-300 hover:bg-slate-700 transition shrink-0">
+        教科書
+      </button>
+      <button data-filter="spring" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-pink-200 hover:bg-slate-700 transition shrink-0">
+        春の星座
+      </button>
+      <button data-filter="summer" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-emerald-200 hover:bg-slate-700 transition shrink-0">
+        夏の星座
+      </button>
+      <button data-filter="autumn" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-amber-200 hover:bg-slate-700 transition shrink-0">
+        秋の星座
+      </button>
+      <button data-filter="winter" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-cyan-200 hover:bg-slate-700 transition shrink-0">
+        冬の星座
+      </button>
+      <button data-filter="northsouth" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-purple-200 hover:bg-slate-700 transition shrink-0">
+        北・南の空
+      </button>
+      <button data-filter="zodiac" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-rose-200 hover:bg-slate-700 transition shrink-0">
+        12星座
+      </button>
+    </nav>
+
+    <!-- 星座カードグリッド -->
+    <main class="flex-1 w-full overflow-y-auto zukan-scroll p-4 sm:p-6">
+      <div id="zukan-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 max-w-7xl mx-auto pb-8">
+        <!-- JSで動的に生成 -->
+      </div>
+    </main>
+  </div>
+
+  <!-- =========================================================
+       画面2：せいざ学習＆星つなぎ＆文字入力メイン画面
+       （左：画面上下いっぱいの夜空 / 右：操作・学習パネル）
+       ========================================================= -->
+  <div id="view-play" class="hidden w-full h-full flex flex-col md:flex-row overflow-hidden">
+
+    <!-- 左側（メイン）：画面上下いっぱいに広がる夜空エリア -->
+    <div id="sky-stage" class="relative flex-1 h-full min-h-0 overflow-hidden">
+      <canvas id="star-canvas" class="block w-full h-full cursor-crosshair"></canvas>
+
+      <!-- 夜空上部フローティングバー -->
+      <div class="absolute top-0 left-0 right-0 px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 pointer-events-none z-20">
+        <button id="btn-back-zukan" class="pointer-events-auto flex items-center gap-1.5 px-3 py-2 rounded-2xl glass-panel hover:bg-blue-900/70 active:scale-95 transition text-xs sm:text-sm font-bold text-white shadow-lg shrink-0">
+          <span>← ずかんへ</span>
+          <span class="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs" id="play-zukan-badge">0/32</span>
+        </button>
+
+        <!-- 進捗ステータスバッジ（完了したらそれぞれ○を表示） -->
+        <div class="pointer-events-auto flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 rounded-2xl glass-panel text-xs sm:text-sm font-bold shadow-lg">
+          <div id="status-lines" class="flex items-center gap-1.5 text-cyan-200">
+            <span>① ほし：</span>
+            <span id="line-progress-text" class="text-white font-extrabold">0 / 0</span>
+            <span id="line-done-badge" class="hidden inline-flex items-center justify-center w-6 h-6 rounded-full border-[2.5px] border-cyan-400 bg-cyan-500/25 text-cyan-300 font-extrabold text-sm shadow">○</span>
+          </div>
+          <div class="w-px h-4 bg-blue-300/30"></div>
+          <div id="status-name" class="flex items-center gap-1.5 text-amber-200">
+            <span>② なまえ：</span>
+            <span id="name-progress-text" class="text-white font-extrabold">0 / 0</span>
+            <span id="name-done-circle" class="hidden inline-flex items-center justify-center w-6 h-6 rounded-full border-[2.5px] border-rose-400 bg-rose-500/25 text-rose-300 font-extrabold text-sm shadow">○</span>
+          </div>
+        </div>
+
+        <!-- 右側コントロール（まわりの星座・リセット・音ON/OFF） -->
+        <div class="pointer-events-auto flex items-center gap-1.5 shrink-0">
+          <button id="btn-toggle-surround" class="px-2.5 sm:px-3 py-2 rounded-2xl glass-panel hover:bg-cyan-900/70 active:scale-95 transition text-xs font-bold text-cyan-200 border border-cyan-400/35 shadow-lg" title="まわりの せいざを ルーズの してんで みる">
+            🔭 まわりの星座
+          </button>
+          <button id="btn-reset-constellation" class="px-2.5 sm:px-3 py-2 rounded-2xl glass-panel hover:bg-slate-800/80 active:scale-95 transition text-xs font-bold text-blue-200 shadow-lg" title="さいしょから やりなおす">
+            ↺ やりなおす
+          </button>
+          <button id="btn-toggle-sound" class="px-2.5 sm:px-3 py-2 rounded-2xl glass-panel hover:bg-slate-800/80 active:scale-95 transition text-xs font-bold text-amber-200 shadow-lg" title="おとの 切り替え">
+            🔊 おと
+          </button>
+        </div>
+      </div>
+
+      <!-- 左上：お手本ミニマップ（1:1正方形） -->
+      <div id="guide-box" class="absolute top-14 left-3 sm:left-4 glass-panel rounded-2xl p-2 shadow-2xl z-10 pointer-events-none">
+        <div class="flex items-center justify-between px-1 mb-1">
+          <span class="text-[11px] font-bold text-cyan-200 tracking-wider">★ おてほん</span>
+          <span id="season-tag" class="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/25 text-blue-200 font-bold">ふゆ</span>
+        </div>
+        <canvas id="guide-canvas" class="block rounded-xl bg-slate-950/80 border border-blue-400/20"></canvas>
+      </div>
+
+      <!-- ルーズ視点モード案内バナー -->
+      <div id="surround-mode-banner" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-2xl bg-cyan-950/90 border border-cyan-300/50 text-cyan-100 text-[11px] sm:text-xs font-bold shadow-xl z-20 pointer-events-none whitespace-nowrap">
+        🔭 ルーズ視点：まわりの せいざを ひょうじ中（まわりの せいざを タップで いどう）
+      </div>
+
+      <!-- 操作ヒントトースト（一時表示） -->
+      <div id="toast-message" class="hidden absolute bottom-12 left-1/2 -translate-x-1/2 px-4 py-2 rounded-2xl bg-indigo-600/95 border border-indigo-300/60 text-white text-xs sm:text-sm font-bold shadow-xl z-30 pointer-events-none transition-opacity duration-300 whitespace-nowrap">
+        ほしから ほしへ ゆびで なぞって つなごう！
+      </div>
+    </div>
+
+    <!-- =======================================================
+         右側サイドパネル：星座名入力 ＋ 神話 ＋ スマホ風フリック入力
+         ======================================================= -->
+    <aside id="side-console" class="w-full md:w-[360px] lg:w-[400px] md:h-full shrink-0 glass-panel border-t md:border-t-0 md:border-l border-blue-300/30 px-3.5 py-3 flex flex-col justify-between gap-2.5 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.55)] overflow-y-auto zukan-scroll">
+
+      <!-- 上段：星座名入力エリア -->
+      <div class="bg-slate-950/60 rounded-2xl p-2.5 border border-blue-400/25 shrink-0">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-amber-300 bg-amber-400/15 border border-amber-300/30 px-2.5 py-0.5 rounded-xl">
+              せいざの なまえ
+            </span>
+            <span id="panel-name-circle" class="hidden inline-flex items-center justify-center w-6 h-6 rounded-full border-[2.5px] border-rose-400 bg-rose-500/25 text-rose-300 font-extrabold text-sm">
+              ○
+            </span>
+          </div>
+
+          <!-- スマホ風パネル開閉ボタン -->
+          <button id="btn-toggle-keypad" class="px-2.5 py-1 rounded-xl bg-blue-500/25 hover:bg-blue-500/40 border border-blue-300/30 text-blue-100 text-[11px] font-bold transition">
+            ⌨ パネル かくす
+          </button>
+        </div>
+
+        <!-- 入力タイルコンテナ（正解時はこの位置に大きな○を表示） -->
+        <div class="relative">
+          <div id="name-input-container" class="flex items-center flex-wrap gap-1.5 px-2.5 py-2 rounded-xl bg-slate-900/90 border border-blue-400/30 cursor-text min-h-[50px]" title="キーボード または 下のパネルで にゅうりょくしてね">
+            <!-- JSで1文字ずつのスロットを生成 -->
+          </div>
+          <!-- 星座名が正解したときに星座名の位置に浮かぶ赤い「○」 -->
+          <div id="name-correct-circle-overlay" class="hidden pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+            <div class="w-16 h-16 rounded-full border-[5px] border-rose-500/90 bg-rose-500/10 shadow-[0_0_20px_rgba(244,63,94,0.45)] flex items-center justify-center">
+              <span class="text-4xl font-extrabold text-rose-400/90">○</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ローマ字入力中のリアルタイムバッファ表示 -->
+        <div id="romaji-buffer-badge" class="hidden mt-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-500/25 border border-cyan-300/50 text-cyan-200 text-xs font-mono font-bold inline-block">
+          ローマじ: <span id="romaji-buffer-text" class="text-white"></span>
+        </div>
+      </div>
+
+      <!-- 中段：神話と豆知識エリア -->
+      <div class="bg-slate-900/80 rounded-2xl p-3.5 border border-emerald-400/25 flex-1 min-h-[120px] flex flex-col justify-start overflow-y-auto zukan-scroll shadow-inner">
+        <div class="flex items-center flex-wrap gap-2 mb-2 pb-1.5 border-b border-emerald-400/20">
+          <span class="text-sm sm:text-base font-extrabold text-emerald-300 tracking-wide">📖 せいざの しんわ・みつけかた</span>
+          <span id="constellation-kanji-hint" class="text-sm text-amber-200 font-bold"></span>
+        </div>
+        <p id="myth-text" class="text-base sm:text-[17px] leading-[1.9] tracking-wide font-medium text-slate-50">
+          <!-- JSで神話を表示 -->
+        </p>
+      </div>
+
+      <!-- 下段：スマホと同じひらがな入力パネル（標準テンキー配列・フリック＆連続タップ対応） -->
+      <div id="mobile-keypad-wrapper" class="shrink-0 bg-slate-950/85 p-2.5 rounded-2xl border border-blue-400/25">
+        <div class="grid grid-cols-4 gap-1.5 w-full max-w-[340px] mx-auto">
+          <!-- 1行目：あ・か・さ ＋ けす（上2段） -->
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="あ">
+            <span>あ</span><span class="text-[9px] text-slate-400 mt-0.5">いうえお</span>
+          </button>
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="か">
+            <span>か</span><span class="text-[9px] text-slate-400 mt-0.5">きくけこ</span>
+          </button>
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="さ">
+            <span>さ</span><span class="text-[9px] text-slate-400 mt-0.5">しすせそ</span>
+          </button>
+          <button type="button" id="key-backspace" class="row-span-2 rounded-xl bg-rose-900/75 hover:bg-rose-800/85 active:scale-95 border border-rose-500/50 text-rose-100 font-bold text-xs flex flex-col items-center justify-center gap-1">
+            <span class="text-base leading-none">⌫</span>
+            <span>けす</span>
+          </button>
+
+          <!-- 2行目：た・な・は -->
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="た">
+            <span>た</span><span class="text-[9px] text-slate-400 mt-0.5">ちつてと</span>
+          </button>
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="な">
+            <span>な</span><span class="text-[9px] text-slate-400 mt-0.5">にぬねの</span>
+          </button>
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="は">
+            <span>は</span><span class="text-[9px] text-slate-400 mt-0.5">ひふへほ</span>
+          </button>
+
+          <!-- 3行目：ま・や・ら ＋ 1もじヒント（下2段） -->
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="ま">
+            <span>ま</span><span class="text-[9px] text-slate-400 mt-0.5">みむめも</span>
+          </button>
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="や">
+            <span>や</span><span class="text-[9px] text-slate-400 mt-0.5">ゆ・よ</span>
+          </button>
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="ら">
+            <span>ら</span><span class="text-[9px] text-slate-400 mt-0.5">りるれろ</span>
+          </button>
+          <button type="button" id="key-hint-char" class="row-span-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-500/90 active:scale-95 border border-indigo-300/50 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 leading-tight px-1 text-center">
+            <span class="text-base leading-none">💡</span>
+            <span>1もじ<br>ヒント</span>
+          </button>
+
+          <!-- 4行目：゛゜小・わ・ー（スマホ標準の最下段配置） -->
+          <button type="button" id="key-dakuten" class="h-[44px] sm:h-[49px] rounded-xl bg-amber-600/80 hover:bg-amber-500/85 active:scale-95 border border-amber-300/60 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center">
+            ゛゜小
+          </button>
+          <button type="button" class="flick-key h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none" data-key="わ">
+            <span>わ</span><span class="text-[9px] text-slate-400 mt-0.5">をんー</span>
+          </button>
+          <button type="button" id="key-chouon" class="h-[44px] sm:h-[49px] rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-600/70 text-white font-extrabold text-base flex flex-col items-center justify-center leading-none">
+            <span>ー</span><span class="text-[9px] text-slate-400 mt-0.5">のばす</span>
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- フリック操作時の花びらガイド（指の周囲に浮かぶポップアップ） -->
+    <div id="flick-popup" class="hidden fixed pointer-events-none z-50 w-36 h-36 -translate-x-1/2 -translate-y-1/2">
+      <div class="relative w-full h-full">
+        <div id="flick-center" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-xl bg-blue-500 text-white font-extrabold text-lg flex items-center justify-center shadow-lg border-2 border-white">あ</div>
+        <div id="flick-left" class="absolute top-1/2 left-0 -translate-y-1/2 w-10 h-10 rounded-xl bg-slate-800/95 text-blue-100 font-bold text-base flex items-center justify-center shadow border border-blue-300/50">い</div>
+        <div id="flick-up" class="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-10 rounded-xl bg-slate-800/95 text-blue-100 font-bold text-base flex items-center justify-center shadow border border-blue-300/50">う</div>
+        <div id="flick-right" class="absolute top-1/2 right-0 -translate-y-1/2 w-10 h-10 rounded-xl bg-slate-800/95 text-blue-100 font-bold text-base flex items-center justify-center shadow border border-blue-300/50">え</div>
+        <div id="flick-down" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-10 rounded-xl bg-slate-800/95 text-blue-100 font-bold text-base flex items-center justify-center shadow border border-blue-300/50">お</div>
+      </div>
+    </div>
+
+    <!-- =======================================================
+         完成お祝いモーダル（図鑑登録完了）
+         ======================================================= -->
+    <div id="complete-modal" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+      <div class="glass-panel max-w-md w-full rounded-3xl p-6 text-center border-2 border-amber-300/70 shadow-[0_0_50px_rgba(251,191,36,0.35)] animate-pop">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/50 text-amber-300 text-xs font-extrabold mb-3">
+          <span>★ 星座図鑑 とうろく かんりょう！ ★</span>
+        </div>
+
+        <h2 id="modal-constellation-name" class="text-2xl sm:text-3xl font-extrabold text-white mb-1">
+          おりおんざ
+        </h2>
+        <p id="modal-constellation-kanji" class="text-sm text-blue-200 font-bold mb-4">
+          （オリオン座）
+        </p>
+
+        <div class="bg-slate-900/80 rounded-2xl p-4 mb-5 border border-blue-400/25">
+          <div class="text-xs text-blue-200 mb-1">いま あつめた せいざのかず</div>
+          <div class="text-2xl font-extrabold text-amber-300 mb-2">
+            <span id="modal-zukan-count">1</span> <span class="text-sm text-white">/ <span id="modal-total-count">32</span> こ</span>
+          </div>
+          <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+            <div id="modal-progress-bar" class="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-700" style="width: 3%"></div>
+          </div>
+          <p id="modal-encouragement" class="text-xs text-emerald-300 font-bold mt-2">
+            やったね！ほしと なまえが ばっちり そろったよ！
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <button id="btn-modal-view-sky" class="flex-1 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-sm transition">
+            ほしぞらを みる
+          </button>
+          <button id="btn-modal-zukan" class="flex-1 py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg transition">
+            ずかんへ もどる
+          </button>
+          <button id="btn-modal-next" class="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-extrabold text-sm shadow-lg transition">
+            つぎの せいざへ →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       アプリケーションロジック（32星座データ・描画・入力エンジン）
+       ========================================================= -->
+  <script>
+    /**
+     * 1. 効果音エンジン（Web Audio APIで外部音声ファイル不要・音割れ防止リミッター搭載）
+     */
+    class SoundEngine {
+      constructor() {
+        this.enabled = true;
+        this.ctx = null;
+        this.masterGain = null;
+        this.compressor = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+
+            // 複数の音が重なっても音割れ（クリッピング）しないようコンプレッサーを通す
+            this.compressor = this.ctx.createDynamicsCompressor();
+            this.compressor.threshold.setValueAtTime(-16, this.ctx.currentTime);
+            this.compressor.knee.setValueAtTime(18, this.ctx.currentTime);
+            this.compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
+            this.compressor.attack.setValueAtTime(0.005, this.ctx.currentTime);
+            this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
+
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.setValueAtTime(0.75, this.ctx.currentTime);
+
+            this.compressor.connect(this.masterGain);
+            this.masterGain.connect(this.ctx.destination);
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      playTone(freq, type = 'sine', duration = 0.16, volume = 0.10, delay = 0, cutoffFreq = 2600) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx || !this.compressor) return;
+        try {
+          const now = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+
+          // 高周波の耳障りな倍音を丸めて澄んだ音色にするローパスフィルタ
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(cutoffFreq, now);
+          filter.Q.setValueAtTime(0.7, now);
+
+          // 立ち上がりと消え際のクリックノイズ（プチプチ音）を防ぐ滑らかなエンベロープ
+          const attackTime = 0.018;
+          const releaseEnd = now + duration;
+          const stopTime = releaseEnd + 0.02;
+
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(volume, now + attackTime);
+          gain.gain.exponentialRampToValueAtTime(0.0008, releaseEnd);
+          gain.gain.linearRampToValueAtTime(0, stopTime);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.compressor);
+
+          osc.start(now);
+          osc.stop(stopTime + 0.005);
+        } catch (e) {
+          // 音声再生不可環境では無視
+        }
+      }
+
+      playStarConnect(step = 0) {
+        const scale = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+        const freq = scale[step % scale.length];
+        this.playTone(freq, 'sine', 0.24, 0.11, 0, 3200);
+        this.playTone(freq * 1.5, 'sine', 0.20, 0.045, 0.035, 3600);
+      }
+
+      playConstellationClear() {
+        // 星座をすべてつないだとき＆星座名正答時の澄んだ正答チャイム
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((f, i) => {
+          this.playTone(f, 'sine', 0.30, 0.095, i * 0.075, 3200);
+          this.playTone(f * 2, 'sine', 0.22, 0.03, i * 0.075 + 0.02, 3800);
+        });
+      }
+
+      playStarError() {
+        // 音割れしない柔らかい低音トーン
+        this.playTone(220, 'triangle', 0.16, 0.07, 0, 750);
+      }
+
+      playKeyPop() {
+        this.playTone(680, 'sine', 0.09, 0.075, 0, 2800);
+      }
+
+      playKeyMiss() {
+        // 赤い文字が左右に震えるアニメーション(0.32s)に合わせた柔らかい震え音
+        this.playTone(210, 'triangle', 0.09, 0.075, 0, 720);
+        this.playTone(185, 'triangle', 0.09, 0.075, 0.08, 720);
+        this.playTone(200, 'triangle', 0.09, 0.07, 0.16, 720);
+        this.playTone(175, 'triangle', 0.13, 0.065, 0.24, 680);
+      }
+
+      playComplete() {
+        const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+        notes.forEach((f, i) => {
+          this.playTone(f, 'triangle', 0.38, 0.085, i * 0.095, 2400);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /**
+     * 2. 収録する星座データベース（30星座 ＋ 夏の大三角・冬の大三角 ＝ 32項目）
+     * - 座標 (x, y) は 1:1 正方形空間での実際の縦横比率に基づいて配置
+     * - mag: 1=1等星, 2=2等星, 3=3等星, 4=4等星（大きさと輝きの違いで表現）
+     */
+    const CONSTELLATIONS = [
+      {
+        id: 'orion',
+        name: 'おりおんざ',
+        kanji: 'オリオン座',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: true,
+        ra: 5.55,
+        dec: 4.0,
+        myth: 'ギリシャ<ruby>神話<rt>しんわ</rt></ruby>の<ruby>狩人<rt>かりうど</rt></ruby>オリオンの<ruby>姿<rt>すがた</rt></ruby>。1<ruby>等星<rt>とうせい</rt></ruby>の<ruby>赤<rt>あか</rt></ruby>いベテルギウスと<ruby>青白<rt>あおじろ</rt></ruby>いリゲル、<ruby>真<rt>ま</rt></ruby>ん<ruby>中<rt>なか</rt></ruby>の「<ruby>三<rt>み</rt></ruby>つ<ruby>星<rt>ぼし</rt></ruby>」と「<ruby>小三<rt>こみ</rt></ruby>つ<ruby>星<rt>ぼし</rt></ruby>」、こんぼうや<ruby>弓<rt>ゆみ</rt></ruby>の<ruby>星<rt>ほし</rt></ruby>まで<ruby>輝<rt>かがや</rt></ruby>く<ruby>冬<rt>ふゆ</rt></ruby>の<ruby>代表<rt>だいひょう</rt></ruby>的な<ruby>星座<rt>せいざ</rt></ruby>です。',
+        stars: [
+          { x: 0.36, y: 0.30, mag: 1, color: '#ff9e7d' }, // 0: ベテルギウス(1等・赤橙・左肩)
+          { x: 0.60, y: 0.32, mag: 2, color: '#dbeafe' }, // 1: ベラトリクス(2等・右肩)
+          { x: 0.44, y: 0.50, mag: 2, color: '#e0f2fe' }, // 2: アルニタク(2等・三つ星左)
+          { x: 0.49, y: 0.48, mag: 2, color: '#e0f2fe' }, // 3: アルニラム(2等・三つ星中)
+          { x: 0.54, y: 0.46, mag: 2, color: '#e0f2fe' }, // 4: ミンタカ(2等・三つ星右)
+          { x: 0.38, y: 0.78, mag: 2, color: '#e0f2fe' }, // 5: サイフ(2等・左足)
+          { x: 0.63, y: 0.76, mag: 1, color: '#bae6fd' }, // 6: リゲル(1等・青白・右足)
+          { x: 0.48, y: 0.21, mag: 3, color: '#fef9c3' }, // 7: メイサ(3等・頭)
+          { x: 0.31, y: 0.19, mag: 4, color: '#e0f2fe' }, // 8: ミュウ星(4等・右腕)
+          { x: 0.26, y: 0.10, mag: 4, color: '#e0f2fe' }, // 9: こんぼう下(4等)
+          { x: 0.33, y: 0.08, mag: 4, color: '#fef9c3' }, // 10: こんぼう上(4等)
+          { x: 0.48, y: 0.57, mag: 4, color: '#e0f2fe' }, // 11: 小三つ星上(4等)
+          { x: 0.49, y: 0.64, mag: 3, color: '#bae6fd' }, // 12: 小三つ星下・大星雲(3等)
+          { x: 0.72, y: 0.23, mag: 4, color: '#e0f2fe' }, // 13: 弓・上(4等)
+          { x: 0.76, y: 0.33, mag: 3, color: '#fef9c3' }, // 14: タビト・弓中上(3等)
+          { x: 0.77, y: 0.43, mag: 4, color: '#e0f2fe' }, // 15: 弓中下(4等)
+          { x: 0.74, y: 0.53, mag: 4, color: '#e0f2fe' }  // 16: 弓・下(4等)
+        ],
+        lines: [
+          [7, 0], [7, 1], [0, 1], [0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [5, 6],
+          [0, 8], [8, 9], [9, 10], [2, 11], [11, 12],
+          [1, 14], [13, 14], [14, 15], [15, 16]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ベテルギウス', dx: -12, dy: -16, align: 'right' },
+          { starIdx: 1, text: 'ベラトリクス', dx: 12, dy: -12, align: 'left' },
+          { starIdx: 6, text: 'リゲル', dx: 14, dy: 8, align: 'left' }
+        ]
+      },
+      {
+        id: 'winter_triangle',
+        name: 'ふゆのだいさんかく',
+        kanji: '冬の大三角',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: true,
+        ra: 6.45,
+        dec: -2.0,
+        myth: 'オリオン<ruby>座<rt>ざ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「ベテルギウス」、おおいぬ<ruby>座<rt>ざ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「シリウス」、こいぬ<ruby>座<rt>ざ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「プロキオン」を<ruby>結<rt>むす</rt></ruby>んでできる<ruby>三角形<rt>さんかくけい</rt></ruby>です。<ruby>夜空<rt>よぞら</rt></ruby>の3つの<ruby>星座<rt>せいざ</rt></ruby>のなかから<ruby>見<rt>み</rt></ruby>つけて<ruby>結<rt>むす</rt></ruby>ぼう！',
+        stars: [
+          { x: 0.64, y: 0.34, mag: 1, color: '#ff9e7d' }, // 0: ベテルギウス(1等・赤橙)
+          { x: 0.24, y: 0.30, mag: 1, color: '#fef9c3' }, // 1: プロキオン(1等・黄白)
+          { x: 0.36, y: 0.72, mag: 1, color: '#bae6fd' }  // 2: シリウス(1等・青白)
+        ],
+        extraStars: [
+          { x: 0.78, y: 0.36, mag: 2, color: '#dbeafe' },
+          { x: 0.69, y: 0.47, mag: 2, color: '#e0f2fe' },
+          { x: 0.72, y: 0.45, mag: 2, color: '#e0f2fe' },
+          { x: 0.75, y: 0.44, mag: 2, color: '#e0f2fe' },
+          { x: 0.66, y: 0.63, mag: 2, color: '#e0f2fe' },
+          { x: 0.80, y: 0.61, mag: 1, color: '#bae6fd' },
+          { x: 0.71, y: 0.28, mag: 3, color: '#fef9c3' },
+          { x: 0.61, y: 0.25, mag: 4, color: '#e0f2fe' },
+          { x: 0.58, y: 0.18, mag: 4, color: '#e0f2fe' },
+          { x: 0.63, y: 0.16, mag: 4, color: '#fef9c3' },
+          { x: 0.72, y: 0.52, mag: 4, color: '#e0f2fe' },
+          { x: 0.72, y: 0.56, mag: 3, color: '#bae6fd' },
+          { x: 0.86, y: 0.30, mag: 4, color: '#e0f2fe' },
+          { x: 0.88, y: 0.37, mag: 3, color: '#fef9c3' },
+          { x: 0.88, y: 0.44, mag: 4, color: '#e0f2fe' },
+          { x: 0.86, y: 0.51, mag: 4, color: '#e0f2fe' },
+          { x: 0.17, y: 0.22, mag: 3, color: '#e0f2fe' },
+          { x: 0.28, y: 0.75, mag: 2, color: '#e0f2fe' },
+          { x: 0.42, y: 0.69, mag: 4, color: '#fef9c3' },
+          { x: 0.41, y: 0.81, mag: 3, color: '#e0f2fe' },
+          { x: 0.38, y: 0.89, mag: 2, color: '#bae6fd' },
+          { x: 0.32, y: 0.94, mag: 2, color: '#e0f2fe' },
+          { x: 0.46, y: 0.91, mag: 2, color: '#fef9c3' },
+          { x: 0.52, y: 0.93, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 0]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ベテルギウス', dx: -10, dy: -16, align: 'right' },
+          { starIdx: 1, text: 'プロキオン', dx: 0, dy: -18, align: 'center' },
+          { starIdx: 2, text: 'シリウス', dx: -12, dy: 16, align: 'right' }
+        ]
+      },
+      {
+        id: 'summer_triangle',
+        name: 'なつのだいさんかく',
+        kanji: '夏の大三角',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: true,
+        ra: 19.65,
+        dec: 30.0,
+        myth: 'こと<ruby>座<rt>ざ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「ベガ」、わし<ruby>座<rt>ざ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「アルタイル」、はくちょう<ruby>座<rt>ざ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「デネブ」を<ruby>結<rt>むす</rt></ruby>んでできる<ruby>大<rt>おお</rt></ruby>きな<ruby>三角形<rt>さんかくけい</rt></ruby>です。3つの<ruby>星座<rt>せいざ</rt></ruby>のなかから1<ruby>等星<rt>とうせい</rt></ruby>をさがして<ruby>結<rt>むす</rt></ruby>ぼう！',
+        stars: [
+          { x: 0.74, y: 0.26, mag: 1, color: '#bae6fd' }, // 0: ベガ(1等・青白・西側/右)
+          { x: 0.24, y: 0.22, mag: 1, color: '#ffffff' }, // 1: デネブ(1等・白・東側/左)
+          { x: 0.48, y: 0.80, mag: 1, color: '#fef9c3' }  // 2: アルタイル(1等・白・南側/下)
+        ],
+        extraStars: [
+          // こと座（右上）の構成星
+          { x: 0.66, y: 0.24, mag: 4, color: '#e0f2fe' },
+          { x: 0.68, y: 0.32, mag: 4, color: '#e0f2fe' },
+          { x: 0.71, y: 0.44, mag: 3, color: '#fef9c3' },
+          { x: 0.63, y: 0.42, mag: 3, color: '#fef9c3' },
+          // はくちょう座（左上）の構成星
+          { x: 0.36, y: 0.34, mag: 2, color: '#fef9c3' },
+          { x: 0.52, y: 0.50, mag: 3, color: '#fde68a' },
+          { x: 0.43, y: 0.26, mag: 3, color: '#e0f2fe' },
+          { x: 0.50, y: 0.17, mag: 3, color: '#e0f2fe' },
+          { x: 0.29, y: 0.42, mag: 3, color: '#e0f2fe' },
+          { x: 0.21, y: 0.50, mag: 3, color: '#e0f2fe' },
+          // わし座（下）の構成星
+          { x: 0.51, y: 0.74, mag: 3, color: '#fed7aa' },
+          { x: 0.45, y: 0.85, mag: 4, color: '#e0f2fe' },
+          { x: 0.62, y: 0.78, mag: 3, color: '#e0f2fe' },
+          { x: 0.35, y: 0.72, mag: 3, color: '#e0f2fe' },
+          { x: 0.52, y: 0.62, mag: 3, color: '#e0f2fe' },
+          { x: 0.59, y: 0.53, mag: 3, color: '#bae6fd' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 0]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ベガ', dx: 14, dy: -12, align: 'left' },
+          { starIdx: 1, text: 'デネブ', dx: -14, dy: -12, align: 'right' },
+          { starIdx: 2, text: 'アルタイル', dx: -14, dy: 14, align: 'right' }
+        ]
+      },
+      {
+        id: 'canis_major',
+        name: 'おおいぬざ',
+        kanji: 'おおいぬ座',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: true,
+        ra: 6.75,
+        dec: -20.0,
+        myth: '<ruby>狩人<rt>かりうど</rt></ruby>オリオンが<ruby>連<rt>つ</rt></ruby>れていた<ruby>猟犬<rt>りょうけん</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。1<ruby>等星<rt>とうせい</rt></ruby>「シリウス」は<ruby>全天<rt>ぜんてん</rt></ruby>でいちばん<ruby>明<rt>あか</rt></ruby>るい<ruby>恒星<rt>こうせい</rt></ruby>で、<ruby>冬<rt>ふゆ</rt></ruby>の<ruby>大三角<rt>だいさんかく</rt></ruby>の<ruby>一<rt>ひと</rt></ruby>つです。',
+        stars: [
+          { x: 0.44, y: 0.22, mag: 1, color: '#bae6fd' },
+          { x: 0.30, y: 0.28, mag: 2, color: '#e0f2fe' },
+          { x: 0.56, y: 0.16, mag: 4, color: '#fef9c3' },
+          { x: 0.52, y: 0.46, mag: 3, color: '#e0f2fe' },
+          { x: 0.46, y: 0.68, mag: 2, color: '#bae6fd' },
+          { x: 0.36, y: 0.84, mag: 2, color: '#e0f2fe' },
+          { x: 0.64, y: 0.74, mag: 2, color: '#fef9c3' },
+          { x: 0.76, y: 0.80, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [1, 0], [0, 2], [0, 3], [3, 4], [4, 5], [4, 6], [6, 7]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'シリウス', dx: 14, dy: -10, align: 'left' },
+          { starIdx: 5, text: 'アダラ', dx: -12, dy: 10, align: 'right' }
+        ]
+      },
+      {
+        id: 'canis_minor',
+        name: 'こいぬざ',
+        kanji: 'こいぬ座',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: true,
+        ra: 7.65,
+        dec: 6.0,
+        myth: 'オリオンが<ruby>連<rt>つ</rt></ruby>れていたもう1<ruby>匹<rt>ぴき</rt></ruby>の<ruby>小<rt>ちい</rt></ruby>さな<ruby>犬<rt>いぬ</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。1<ruby>等星<rt>とうせい</rt></ruby>「プロキオン」は、おおいぬ<ruby>座<rt>ざ</rt></ruby>のシリウスより<ruby>少<rt>すこ</rt></ruby>し<ruby>早<rt>はや</rt></ruby>く<ruby>東<rt>ひがし</rt></ruby>の<ruby>空<rt>そら</rt></ruby>にのぼります。',
+        stars: [
+          { x: 0.64, y: 0.56, mag: 1, color: '#fef9c3' },
+          { x: 0.36, y: 0.36, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'プロキオン', dx: 14, dy: 8, align: 'left' },
+          { starIdx: 1, text: 'ゴメイサ', dx: -12, dy: -10, align: 'right' }
+        ]
+      },
+      {
+        id: 'gemini',
+        name: 'ふたござ',
+        kanji: 'ふたご座',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: true,
+        ra: 7.10,
+        dec: 24.0,
+        myth: 'とても<ruby>仲良<rt>なかよ</rt></ruby>しの<ruby>双子<rt>ふたご</rt></ruby>の<ruby>兄弟<rt>きょうだい</rt></ruby>カストルとポルックス。<ruby>弟<rt>おとうと</rt></ruby>のポルックスが1<ruby>等星<rt>とうせい</rt></ruby>、<ruby>兄<rt>あに</rt></ruby>のカストルが2<ruby>等星<rt>とうせい</rt></ruby>として<ruby>肩<rt>かた</rt></ruby>を<ruby>並<rt>なら</rt></ruby>べて<ruby>輝<rt>かがや</rt></ruby>きます。',
+        stars: [
+          { x: 0.36, y: 0.18, mag: 2, color: '#e0f2fe' },
+          { x: 0.56, y: 0.22, mag: 1, color: '#fed7aa' },
+          { x: 0.32, y: 0.42, mag: 3, color: '#fef9c3' },
+          { x: 0.54, y: 0.46, mag: 3, color: '#fef9c3' },
+          { x: 0.20, y: 0.36, mag: 4, color: '#e0f2fe' },
+          { x: 0.68, y: 0.40, mag: 4, color: '#e0f2fe' },
+          { x: 0.24, y: 0.74, mag: 3, color: '#e0f2fe' },
+          { x: 0.46, y: 0.78, mag: 2, color: '#e0f2fe' },
+          { x: 0.68, y: 0.74, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [0, 2], [2, 4], [2, 6], [1, 3], [3, 5], [3, 7], [3, 8]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'カストル', dx: -12, dy: -12, align: 'right' },
+          { starIdx: 1, text: 'ポルックス', dx: 14, dy: -12, align: 'left' },
+          { starIdx: 7, text: 'アルヘナ', dx: 0, dy: 18, align: 'center' }
+        ]
+      },
+      {
+        id: 'cygnus',
+        name: 'はくちょうざ',
+        kanji: 'はくちょう座',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: true,
+        ra: 20.55,
+        dec: 42.0,
+        myth: '<ruby>天<rt>あま</rt></ruby>の<ruby>川<rt>がわ</rt></ruby>の<ruby>上<rt>うえ</rt></ruby>を<ruby>翼<rt>つばさ</rt></ruby>を<ruby>広<rt>ひろ</rt></ruby>げて<ruby>飛<rt>と</rt></ruby>ぶ<ruby>白鳥<rt>はくちょう</rt></ruby>の<ruby>姿<rt>すがた</rt></ruby>。しっぽの1<ruby>等星<rt>とうせい</rt></ruby>「デネブ」は<ruby>夏<rt>なつ</rt></ruby>の<ruby>大三角<rt>だいさんかく</rt></ruby>をつくり、<ruby>十字<rt>じゅうじ</rt></ruby>の<ruby>形<rt>かたち</rt></ruby>から「<ruby>北十字<rt>きたじゅうじ</rt></ruby>」ともよばれます。',
+        stars: [
+          { x: 0.50, y: 0.14, mag: 1, color: '#ffffff' },
+          { x: 0.50, y: 0.42, mag: 2, color: '#fef9c3' },
+          { x: 0.50, y: 0.84, mag: 3, color: '#fde68a' },
+          { x: 0.20, y: 0.36, mag: 3, color: '#e0f2fe' },
+          { x: 0.34, y: 0.40, mag: 3, color: '#e0f2fe' },
+          { x: 0.66, y: 0.40, mag: 3, color: '#e0f2fe' },
+          { x: 0.80, y: 0.36, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [3, 4], [4, 1], [1, 5], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'デネブ', dx: 14, dy: -8, align: 'left' },
+          { starIdx: 2, text: 'アルビレオ', dx: 14, dy: 8, align: 'left' }
+        ]
+      },
+      {
+        id: 'lyra',
+        name: 'ことざ',
+        kanji: 'こと座',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: true,
+        ra: 18.85,
+        dec: 36.5,
+        myth: '<ruby>音楽<rt>おんがく</rt></ruby>の<ruby>名人<rt>めいじん</rt></ruby>オルフェウスが<ruby>弾<rt>ひ</rt></ruby>いたたて<ruby>琴<rt>ごと</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。1<ruby>等星<rt>とうせい</rt></ruby>「ベガ」は<ruby>七夕<rt>たなばた</rt></ruby>の「おりひめ<ruby>星<rt>ぼし</rt></ruby>」として<ruby>有名<rt>ゆうめい</rt></ruby>です。',
+        stars: [
+          { x: 0.32, y: 0.22, mag: 1, color: '#bae6fd' },
+          { x: 0.52, y: 0.26, mag: 4, color: '#e0f2fe' },
+          { x: 0.46, y: 0.40, mag: 4, color: '#e0f2fe' },
+          { x: 0.64, y: 0.38, mag: 4, color: '#e0f2fe' },
+          { x: 0.40, y: 0.72, mag: 3, color: '#fef9c3' },
+          { x: 0.60, y: 0.70, mag: 3, color: '#fef9c3' }
+        ],
+        lines: [
+          [0, 1], [0, 2], [1, 2], [2, 3], [2, 4], [4, 5], [5, 3]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ベガ（おりひめ星）', dx: -12, dy: -14, align: 'right' }
+        ]
+      },
+      {
+        id: 'aquila',
+        name: 'わしざ',
+        kanji: 'わし座',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: true,
+        ra: 19.75,
+        dec: 5.0,
+        myth: '<ruby>大神<rt>おおがみ</rt></ruby>ゼウスが<ruby>姿<rt>すがた</rt></ruby>をかえた<ruby>大<rt>おお</rt></ruby>きなワシの<ruby>星座<rt>せいざ</rt></ruby>。1<ruby>等星<rt>とうせい</rt></ruby>「アルタイル」は<ruby>七夕<rt>たなばた</rt></ruby>の「ひこ<ruby>星<rt>ぼし</rt></ruby>」で、<ruby>天<rt>あま</rt></ruby>の<ruby>川<rt>がわ</rt></ruby>をはさんでベガと<ruby>向<rt>む</rt></ruby>き合っています。',
+        stars: [
+          { x: 0.50, y: 0.34, mag: 1, color: '#fef9c3' },
+          { x: 0.44, y: 0.24, mag: 3, color: '#fed7aa' },
+          { x: 0.56, y: 0.44, mag: 4, color: '#e0f2fe' },
+          { x: 0.24, y: 0.44, mag: 3, color: '#e0f2fe' },
+          { x: 0.76, y: 0.32, mag: 3, color: '#e0f2fe' },
+          { x: 0.48, y: 0.64, mag: 3, color: '#e0f2fe' },
+          { x: 0.36, y: 0.82, mag: 3, color: '#bae6fd' }
+        ],
+        lines: [
+          [1, 0], [0, 2], [3, 1], [0, 4], [2, 5], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'アルタイル（ひこ星）', dx: 14, dy: -12, align: 'left' }
+        ]
+      },
+      {
+        id: 'scorpius',
+        name: 'さそりざ',
+        kanji: 'さそり座',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: true,
+        ra: 16.90,
+        dec: -28.0,
+        myth: '<ruby>夏<rt>なつ</rt></ruby>の<ruby>南<rt>みなみ</rt></ruby>の<ruby>空<rt>そら</rt></ruby>に<ruby>大<rt>おお</rt></ruby>きなS<ruby>字<rt>じ</rt></ruby>をえがくサソリの<ruby>星座<rt>せいざ</rt></ruby>。<ruby>心臓<rt>しんぞう</rt></ruby>の<ruby>位置<rt>いち</rt></ruby>に<ruby>赤<rt>あか</rt></ruby>く<ruby>輝<rt>かがや</rt></ruby>く1<ruby>等星<rt>とうせい</rt></ruby>「アンタレス」があります。',
+        stars: [
+          { x: 0.24, y: 0.20, mag: 3, color: '#e0f2fe' },
+          { x: 0.20, y: 0.32, mag: 2, color: '#e0f2fe' },
+          { x: 0.24, y: 0.44, mag: 3, color: '#e0f2fe' },
+          { x: 0.38, y: 0.36, mag: 1, color: '#ff8a65' },
+          { x: 0.46, y: 0.48, mag: 3, color: '#fef9c3' },
+          { x: 0.48, y: 0.64, mag: 2, color: '#fef9c3' },
+          { x: 0.56, y: 0.78, mag: 3, color: '#e0f2fe' },
+          { x: 0.70, y: 0.80, mag: 2, color: '#e0f2fe' },
+          { x: 0.78, y: 0.68, mag: 3, color: '#e0f2fe' },
+          { x: 0.72, y: 0.58, mag: 2, color: '#bae6fd' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [1, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9]
+        ],
+        starLabels: [
+          { starIdx: 3, text: 'アンタレス', dx: 14, dy: -12, align: 'left' },
+          { starIdx: 9, text: 'シャウラ', dx: 12, dy: -8, align: 'left' }
+        ]
+      },
+      {
+        id: 'cassiopeia',
+        name: 'かしおぺやざ',
+        kanji: 'カシオペヤ座',
+        season: 'northsouth',
+        seasonLabel: 'きた',
+        isRika: true,
+        ra: 1.05,
+        dec: 61.0,
+        myth: 'W（またはM）の<ruby>形<rt>かたち</rt></ruby>をした<ruby>王妃<rt>おうひ</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。<ruby>一年中<rt>いちねんじゅう</rt></ruby><ruby>北<rt>きた</rt></ruby>の<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>え、<ruby>北極星<rt>ほっきょくせい</rt></ruby>をさがすときの<ruby>大切<rt>たいせつ</rt></ruby>な<ruby>目印<rt>めじるし</rt></ruby>になります。',
+        stars: [
+          { x: 0.18, y: 0.34, mag: 2, color: '#fef9c3' },
+          { x: 0.34, y: 0.64, mag: 2, color: '#fed7aa' },
+          { x: 0.50, y: 0.44, mag: 2, color: '#bae6fd' },
+          { x: 0.68, y: 0.66, mag: 3, color: '#e0f2fe' },
+          { x: 0.82, y: 0.32, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4]
+        ],
+        starLabels: [
+          { starIdx: 1, text: 'シェダル', dx: 0, dy: 18, align: 'center' }
+        ]
+      },
+      {
+        id: 'ursa_major',
+        name: 'おおぐまざ',
+        kanji: 'おおぐま座',
+        season: 'northsouth',
+        seasonLabel: 'きた',
+        isRika: true,
+        ra: 11.40,
+        dec: 55.0,
+        myth: '<ruby>背中<rt>せなか</rt></ruby>からしっぽにかけての7つの<ruby>星<rt>ほし</rt></ruby>が「<ruby>北斗七星<rt>ほくとしちせい</rt></ruby>」とよばれます。ひしゃくの<ruby>先<rt>さき</rt></ruby>の2つの<ruby>星<rt>ほし</rt></ruby>を5<ruby>倍<rt>ばい</rt></ruby>のばすと<ruby>北極星<rt>ほっきょくせい</rt></ruby>が<ruby>見<rt>み</rt></ruby>つかります。',
+        stars: [
+          { x: 0.22, y: 0.30, mag: 2, color: '#fed7aa' },
+          { x: 0.24, y: 0.48, mag: 2, color: '#e0f2fe' },
+          { x: 0.40, y: 0.54, mag: 2, color: '#e0f2fe' },
+          { x: 0.42, y: 0.38, mag: 3, color: '#e0f2fe' },
+          { x: 0.56, y: 0.38, mag: 2, color: '#e0f2fe' },
+          { x: 0.68, y: 0.42, mag: 2, color: '#e0f2fe' },
+          { x: 0.82, y: 0.54, mag: 2, color: '#bae6fd' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ドゥーベ', dx: -10, dy: -14, align: 'right' },
+          { starIdx: 5, text: 'ミザール', dx: 8, dy: -14, align: 'left' }
+        ]
+      },
+      {
+        id: 'ursa_minor',
+        name: 'こぐまざ',
+        kanji: 'こぐま座',
+        season: 'northsouth',
+        seasonLabel: 'きた',
+        isRika: true,
+        ra: 15.20,
+        dec: 78.0,
+        myth: 'しっぽの<ruby>先<rt>さき</rt></ruby>に<ruby>輝<rt>かがや</rt></ruby>く2<ruby>等星<rt>とうせい</rt></ruby>が「<ruby>北極星<rt>ほっきょくせい</rt></ruby>（ポラリス）」です。<ruby>地球<rt>ちきゅう</rt></ruby>の<ruby>地軸<rt>ちじく</rt></ruby>の<ruby>延長<rt>えんちょう</rt></ruby>にあるため、<ruby>一晩中<rt>ひとばんじゅう</rt></ruby>ほとんど<ruby>動<rt>うご</rt></ruby>きません。',
+        stars: [
+          { x: 0.78, y: 0.22, mag: 2, color: '#fef9c3' },
+          { x: 0.62, y: 0.32, mag: 4, color: '#e0f2fe' },
+          { x: 0.50, y: 0.44, mag: 4, color: '#e0f2fe' },
+          { x: 0.42, y: 0.54, mag: 3, color: '#e0f2fe' },
+          { x: 0.26, y: 0.58, mag: 2, color: '#fed7aa' },
+          { x: 0.24, y: 0.74, mag: 3, color: '#e0f2fe' },
+          { x: 0.40, y: 0.70, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]
+        ],
+        starLabels: [
+          { starIdx: 0, text: '北極星（ポラリス）', dx: 0, dy: -16, align: 'center' }
+        ]
+      },
+      {
+        id: 'aries',
+        name: 'おひつじざ',
+        kanji: 'おひつじ座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 2.55,
+        dec: 20.5,
+        myth: '<ruby>金色<rt>きんいろ</rt></ruby>の<ruby>毛<rt>け</rt></ruby>をもつ<ruby>空飛<rt>そらと</rt></ruby>ぶ<ruby>羊<rt>ひつじ</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。2<ruby>等星<rt>とうせい</rt></ruby>「ハマル」をはじめ、<ruby>頭<rt>あたま</rt></ruby>の<ruby>部分<rt>ぶぶん</rt></ruby>に<ruby>星<rt>ほし</rt></ruby>が<ruby>並<rt>なら</rt></ruby>んでいます。',
+        stars: [
+          { x: 0.30, y: 0.36, mag: 2, color: '#fed7aa' },
+          { x: 0.48, y: 0.46, mag: 3, color: '#e0f2fe' },
+          { x: 0.56, y: 0.62, mag: 4, color: '#e0f2fe' },
+          { x: 0.74, y: 0.68, mag: 4, color: '#fef9c3' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ハマル', dx: -10, dy: -14, align: 'right' }
+        ]
+      },
+      {
+        id: 'taurus',
+        name: 'おうしざ',
+        kanji: 'おうし座',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: false,
+        ra: 4.55,
+        dec: 18.0,
+        myth: 'V<ruby>字<rt>じ</rt></ruby>に<ruby>並<rt>なら</rt></ruby>んだ<ruby>顔<rt>かお</rt></ruby>の<ruby>右目<rt>みぎめ</rt></ruby>に<ruby>オレンジ色<rt>いろ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「アルデバラン」が<ruby>光<rt>ひか</rt></ruby>り、<ruby>背中<rt>せなか</rt></ruby>には「すばる（プレアデス<ruby>星団<rt>せいだん</rt></ruby>）」があります。',
+        stars: [
+          { x: 0.48, y: 0.54, mag: 1, color: '#ff9e7d' },
+          { x: 0.40, y: 0.62, mag: 3, color: '#fef9c3' },
+          { x: 0.32, y: 0.66, mag: 3, color: '#fef9c3' },
+          { x: 0.36, y: 0.50, mag: 3, color: '#fef9c3' },
+          { x: 0.44, y: 0.42, mag: 3, color: '#e0f2fe' },
+          { x: 0.22, y: 0.24, mag: 2, color: '#bae6fd' },
+          { x: 0.26, y: 0.40, mag: 3, color: '#e0f2fe' },
+          { x: 0.72, y: 0.34, mag: 3, color: '#bae6fd' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [0, 6], [4, 7]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'アルデバラン', dx: 14, dy: 8, align: 'left' },
+          { starIdx: 7, text: 'すばる（プレアデス星団）', dx: 10, dy: -12, align: 'left' }
+        ]
+      },
+      {
+        id: 'cancer',
+        name: 'かにざ',
+        kanji: 'かに座',
+        season: 'spring',
+        seasonLabel: 'はる',
+        isRika: false,
+        ra: 8.60,
+        dec: 19.5,
+        myth: 'ヘルクレスと<ruby>戦<rt>たたか</rt></ruby>った<ruby>大<rt>おお</rt></ruby>きなカニの<ruby>星座<rt>せいざ</rt></ruby>。<ruby>甲羅<rt>こうら</rt></ruby>の<ruby>真<rt>ま</rt></ruby>ん<ruby>中<rt>なか</rt></ruby>には「プレセペ<ruby>星団<rt>せいだん</rt></ruby>」という<ruby>星<rt>ほし</rt></ruby>の<ruby>集<rt>あつ</rt></ruby>まりがかすかに<ruby>見<rt>み</rt></ruby>えます。',
+        stars: [
+          { x: 0.48, y: 0.48, mag: 4, color: '#fef9c3' },
+          { x: 0.46, y: 0.24, mag: 4, color: '#e0f2fe' },
+          { x: 0.32, y: 0.68, mag: 4, color: '#fed7aa' },
+          { x: 0.68, y: 0.64, mag: 3, color: '#fed7aa' }
+        ],
+        lines: [
+          [1, 0], [0, 2], [0, 3]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'プレセペ星団', dx: 14, dy: -6, align: 'left' }
+        ]
+      },
+      {
+        id: 'leo',
+        name: 'ししざ',
+        kanji: 'しし座',
+        season: 'spring',
+        seasonLabel: 'はる',
+        isRika: false,
+        ra: 10.65,
+        dec: 15.5,
+        myth: '？<ruby>マーク<rt>まーく</rt></ruby>を<ruby>裏返<rt>うらがえ</rt></ruby>した「<ruby>獅子<rt>しし</rt></ruby>の<ruby>大鎌<rt>おおがま</rt></ruby>」の<ruby>根元<rt>ねもと</rt></ruby>に1<ruby>等星<rt>とうせい</rt></ruby>「レグルス」、しっぽに2<ruby>等星<rt>とうせい</rt></ruby>「デネボラ」が<ruby>輝<rt>かがや</rt></ruby>く<ruby>春<rt>はる</rt></ruby>の<ruby>王者<rt>おうじゃ</rt></ruby>です。',
+        stars: [
+          { x: 0.30, y: 0.62, mag: 1, color: '#bae6fd' },
+          { x: 0.28, y: 0.46, mag: 3, color: '#e0f2fe' },
+          { x: 0.34, y: 0.34, mag: 2, color: '#fed7aa' },
+          { x: 0.30, y: 0.22, mag: 3, color: '#fef9c3' },
+          { x: 0.20, y: 0.18, mag: 3, color: '#fed7aa' },
+          { x: 0.14, y: 0.26, mag: 4, color: '#e0f2fe' },
+          { x: 0.56, y: 0.44, mag: 3, color: '#e0f2fe' },
+          { x: 0.54, y: 0.60, mag: 3, color: '#e0f2fe' },
+          { x: 0.80, y: 0.52, mag: 2, color: '#bae6fd' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [2, 6], [0, 7], [6, 7], [6, 8], [7, 8]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'レグルス', dx: -12, dy: 14, align: 'right' },
+          { starIdx: 8, text: 'デネボラ', dx: 12, dy: -8, align: 'left' }
+        ]
+      },
+      {
+        id: 'virgo',
+        name: 'おとめざ',
+        kanji: 'おとめ座',
+        season: 'spring',
+        seasonLabel: 'はる',
+        isRika: false,
+        ra: 13.35,
+        dec: -3.5,
+        myth: '<ruby>農業<rt>のうぎょう</rt></ruby>の<ruby>女神<rt>めがみ</rt></ruby>デメテルの<ruby>姿<rt>すがた</rt></ruby>。<ruby>左手<rt>ひだりて</rt></ruby>に<ruby>持<rt>も</rt></ruby>つ<ruby>麦<rt>むぎ</rt></ruby>の<ruby>穂<rt>ほ</rt></ruby>の<ruby>位置<rt>いち</rt></ruby>に、<ruby>真珠<rt>しんじゅ</rt></ruby>のように<ruby>白<rt>しろ</rt></ruby>く<ruby>輝<rt>かがや</rt></ruby>く1<ruby>等星<rt>とうせい</rt></ruby>「スピカ」があります。',
+        stars: [
+          { x: 0.62, y: 0.68, mag: 1, color: '#bae6fd' },
+          { x: 0.46, y: 0.48, mag: 3, color: '#fef9c3' },
+          { x: 0.30, y: 0.52, mag: 3, color: '#e0f2fe' },
+          { x: 0.22, y: 0.38, mag: 4, color: '#e0f2fe' },
+          { x: 0.48, y: 0.28, mag: 3, color: '#fed7aa' },
+          { x: 0.64, y: 0.46, mag: 3, color: '#e0f2fe' },
+          { x: 0.78, y: 0.42, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [3, 2], [2, 1], [1, 4], [1, 0], [1, 5], [5, 0], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'スピカ', dx: 14, dy: 10, align: 'left' }
+        ]
+      },
+      {
+        id: 'libra',
+        name: 'てんびんざ',
+        kanji: 'てんびん座',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: false,
+        ra: 15.20,
+        dec: -15.5,
+        myth: '<ruby>正義<rt>せいぎ</rt></ruby>の<ruby>女神<rt>めがみ</rt></ruby>アストライアが<ruby>人間<rt>にんげん</rt></ruby>の<ruby>善悪<rt>ぜんあく</rt></ruby>をはかるために<ruby>持<rt>も</rt></ruby>っていた<ruby>天秤<rt>てんびん</rt></ruby>（はかり）の<ruby>星座<rt>せいざ</rt></ruby>です。',
+        stars: [
+          { x: 0.48, y: 0.24, mag: 3, color: '#bae6fd' },
+          { x: 0.28, y: 0.46, mag: 3, color: '#fef9c3' },
+          { x: 0.68, y: 0.48, mag: 3, color: '#fed7aa' },
+          { x: 0.34, y: 0.74, mag: 4, color: '#e0f2fe' },
+          { x: 0.62, y: 0.74, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [0, 2], [1, 2], [1, 3], [2, 4]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ズベンエシャマリ', dx: 0, dy: -16, align: 'center' }
+        ]
+      },
+      {
+        id: 'sagittarius',
+        name: 'いてざ',
+        kanji: 'いて座',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: false,
+        ra: 18.90,
+        dec: -28.5,
+        myth: '<ruby>弓矢<rt>ゆみや</rt></ruby>をかまえたケンタウロス<ruby>族<rt>ぞく</rt></ruby>の<ruby>賢者<rt>けんじゃ</rt></ruby>ケイロンの<ruby>姿<rt>すがた</rt></ruby>。<ruby>天<rt>あま</rt></ruby>の<ruby>川<rt>がわ</rt></ruby>がいちばん<ruby>濃<rt>こ</rt></ruby>く<ruby>輝<rt>かがや</rt></ruby>く<ruby>方向<rt>ほうこう</rt></ruby>にあり、「<ruby>南斗六星<rt>なんとろくせい</rt></ruby>」とよばれるひしゃくの<ruby>形<rt>かたち</rt></ruby>が<ruby>有名<rt>ゆうめい</rt></ruby>です。',
+        stars: [
+          { x: 0.34, y: 0.42, mag: 2, color: '#bae6fd' },
+          { x: 0.30, y: 0.30, mag: 3, color: '#fed7aa' },
+          { x: 0.34, y: 0.18, mag: 3, color: '#fed7aa' },
+          { x: 0.52, y: 0.32, mag: 2, color: '#bae6fd' },
+          { x: 0.56, y: 0.48, mag: 3, color: '#e0f2fe' },
+          { x: 0.70, y: 0.42, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [3, 5], [4, 5]
+        ],
+        starLabels: [
+          { starIdx: 3, text: 'ヌンキ', dx: 12, dy: -12, align: 'left' }
+        ]
+      },
+      {
+        id: 'capricornus',
+        name: 'やぎざ',
+        kanji: 'やぎ座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 21.05,
+        dec: -18.0,
+        myth: '<ruby>上半身<rt>じょうはんしん</rt></ruby>がヤギ、<ruby>下半身<rt>かはんしん</rt></ruby>が<ruby>魚<rt>さかな</rt></ruby>という<ruby>不思議<rt>ふしぎ</rt></ruby>な<ruby>姿<rt>すがた</rt></ruby>の<ruby>牧神<rt>ぼくしん</rt></ruby>パン。<ruby>大<rt>おお</rt></ruby>きな<ruby>逆三角形<rt>ぎゃくさんかくけい</rt></ruby>（パンツの<ruby>形<rt>かたち</rt></ruby>）をえがいています。',
+        stars: [
+          { x: 0.22, y: 0.34, mag: 3, color: '#fef9c3' },
+          { x: 0.24, y: 0.46, mag: 3, color: '#e0f2fe' },
+          { x: 0.50, y: 0.44, mag: 4, color: '#e0f2fe' },
+          { x: 0.78, y: 0.36, mag: 3, color: '#e0f2fe' },
+          { x: 0.64, y: 0.60, mag: 4, color: '#e0f2fe' },
+          { x: 0.48, y: 0.72, mag: 4, color: '#e0f2fe' },
+          { x: 0.34, y: 0.60, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]
+        ],
+        starLabels: [
+          { starIdx: 3, text: 'デネブ・アルゲディ', dx: 8, dy: -14, align: 'left' }
+        ]
+      },
+      {
+        id: 'aquarius',
+        name: 'みずがめざ',
+        kanji: 'みずがめ座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 22.35,
+        dec: -11.0,
+        myth: '<ruby>神々<rt>かみがみ</rt></ruby>に<ruby>飲<rt>の</rt></ruby>み<ruby>物<rt>もの</rt></ruby>をつぐ<ruby>美少年<rt>びしょうねん</rt></ruby>ガニュメデスの<ruby>星座<rt>せいざ</rt></ruby>。Y<ruby>字<rt>じ</rt></ruby>に<ruby>並<rt>なら</rt></ruby>んだ「<ruby>水瓶<rt>みずがめ</rt></ruby>」から<ruby>水<rt>みず</rt></ruby>が<ruby>流<rt>なが</rt></ruby>れ<ruby>出<rt>で</rt></ruby>る<ruby>様子<rt>ようす</rt></ruby>がえがかれています。',
+        stars: [
+          { x: 0.30, y: 0.36, mag: 3, color: '#fef9c3' },
+          { x: 0.46, y: 0.28, mag: 3, color: '#fef9c3' },
+          { x: 0.60, y: 0.34, mag: 4, color: '#e0f2fe' },
+          { x: 0.66, y: 0.24, mag: 4, color: '#e0f2fe' },
+          { x: 0.74, y: 0.36, mag: 4, color: '#e0f2fe' },
+          { x: 0.64, y: 0.44, mag: 4, color: '#e0f2fe' },
+          { x: 0.68, y: 0.64, mag: 3, color: '#e0f2fe' },
+          { x: 0.56, y: 0.78, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [2, 4], [2, 5], [5, 6], [6, 7]
+        ],
+        starLabels: [
+          { starIdx: 1, text: 'サダルメリク', dx: 0, dy: -14, align: 'center' }
+        ]
+      },
+      {
+        id: 'pisces',
+        name: 'うおざ',
+        kanji: 'うお座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 0.45,
+        dec: 12.0,
+        myth: '<ruby>怪物<rt>かいぶつ</rt></ruby>テュポンから<ruby>逃<rt>に</rt></ruby>げるため、<ruby>美<rt>うつく</rt></ruby>しい<ruby>女神<rt>めがみ</rt></ruby>アフロディテと<ruby>子<rt>こ</rt></ruby>の<ruby>エロス<rt>えろす</rt></ruby>が<ruby>変身<rt>へんしん</rt></ruby>した2<ruby>匹<rt>ひき</rt></ruby>の<ruby>魚<rt>さかな</rt></ruby>がリボンで結ばれた<ruby>姿<rt>すがた</rt></ruby>です。',
+        stars: [
+          { x: 0.72, y: 0.72, mag: 4, color: '#e0f2fe' },
+          { x: 0.54, y: 0.62, mag: 4, color: '#e0f2fe' },
+          { x: 0.34, y: 0.54, mag: 4, color: '#e0f2fe' },
+          { x: 0.22, y: 0.60, mag: 4, color: '#e0f2fe' },
+          { x: 0.28, y: 0.46, mag: 4, color: '#e0f2fe' },
+          { x: 0.68, y: 0.48, mag: 4, color: '#e0f2fe' },
+          { x: 0.64, y: 0.24, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 2], [0, 5], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'アルリシャ（結び目）', dx: 10, dy: 14, align: 'left' }
+        ]
+      },
+      {
+        id: 'auriga',
+        name: 'ぎょしゃざ',
+        kanji: 'ぎょしゃ座',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: false,
+        ra: 5.85,
+        dec: 42.0,
+        myth: '<ruby>将棋<rt>しょうぎ</rt></ruby>の<ruby>駒<rt>こま</rt></ruby>のような<ruby>五角形<rt>ごかくけい</rt></ruby>をした<ruby>冬<rt>ふゆ</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。<ruby>黄色<rt>きいろ</rt></ruby>く<ruby>輝<rt>かがや</rt></ruby>く1<ruby>等星<rt>とうせい</rt></ruby>「カペラ」が<ruby>目印<rt>めじるし</rt></ruby>です。',
+        stars: [
+          { x: 0.36, y: 0.22, mag: 1, color: '#fef08a' },
+          { x: 0.64, y: 0.26, mag: 2, color: '#e0f2fe' },
+          { x: 0.72, y: 0.54, mag: 3, color: '#e0f2fe' },
+          { x: 0.50, y: 0.80, mag: 2, color: '#bae6fd' },
+          { x: 0.28, y: 0.54, mag: 3, color: '#fed7aa' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 0]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'カペラ', dx: -14, dy: -10, align: 'right' }
+        ]
+      },
+      {
+        id: 'bootes',
+        name: 'うしかいざ',
+        kanji: 'うしかい座',
+        season: 'spring',
+        seasonLabel: 'はる',
+        isRika: false,
+        ra: 14.65,
+        dec: 30.5,
+        myth: 'ネクタイのような<ruby>五角形<rt>ごかくけい</rt></ruby>をした<ruby>春<rt>はる</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。0<ruby>等星<rt>とうせい</rt></ruby>クラスに<ruby>明<rt>あか</rt></ruby>るいオレンジ<ruby>色<rt>いろ</rt></ruby>の1<ruby>等星<rt>とうせい</rt></ruby>「アークトゥルス」が<ruby>輝<rt>かがや</rt></ruby>きます。',
+        stars: [
+          { x: 0.50, y: 0.76, mag: 1, color: '#fdba74' },
+          { x: 0.34, y: 0.52, mag: 3, color: '#e0f2fe' },
+          { x: 0.38, y: 0.32, mag: 3, color: '#e0f2fe' },
+          { x: 0.54, y: 0.18, mag: 3, color: '#fef9c3' },
+          { x: 0.66, y: 0.36, mag: 3, color: '#e0f2fe' },
+          { x: 0.62, y: 0.56, mag: 2, color: '#fed7aa' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'アークトゥルス', dx: 14, dy: 10, align: 'left' }
+        ]
+      },
+      {
+        id: 'corona_borealis',
+        name: 'かんむりざ',
+        kanji: 'かんむり座',
+        season: 'spring',
+        seasonLabel: 'はる',
+        isRika: false,
+        ra: 15.80,
+        dec: 30.0,
+        myth: '<ruby>王女<rt>おうじょ</rt></ruby>アリアドネの<ruby>頭<rt>あたま</rt></ruby>に<ruby>輝<rt>かがや</rt></ruby>いた<ruby>宝石<rt>ほうせき</rt></ruby>の<ruby>冠<rt>かんむり</rt></ruby>。<ruby>半円形<rt>はんえんけい</rt></ruby>に<ruby>並<rt>なら</rt></ruby>んだ<ruby>星<rt>ほし</rt></ruby>の<ruby>真<rt>ま</rt></ruby>ん<ruby>中<rt>なか</rt></ruby>に2<ruby>等星<rt>とうせい</rt></ruby>「ゲンマ（<ruby>宝石<rt>ほうせき</rt></ruby>）」が<ruby>光<rt>ひか</rt></ruby>ります。',
+        stars: [
+          { x: 0.22, y: 0.38, mag: 4, color: '#e0f2fe' },
+          { x: 0.30, y: 0.54, mag: 4, color: '#e0f2fe' },
+          { x: 0.44, y: 0.64, mag: 2, color: '#bae6fd' },
+          { x: 0.60, y: 0.62, mag: 4, color: '#e0f2fe' },
+          { x: 0.72, y: 0.48, mag: 4, color: '#e0f2fe' },
+          { x: 0.78, y: 0.32, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5]
+        ],
+        starLabels: [
+          { starIdx: 2, text: 'ゲンマ（宝石）', dx: 0, dy: 18, align: 'center' }
+        ]
+      },
+      {
+        id: 'pegasus',
+        name: 'ぺがすすざ',
+        kanji: 'ペガスス座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 22.85,
+        dec: 20.0,
+        myth: '<ruby>翼<rt>つばさ</rt></ruby>をもつ<ruby>天馬<rt>てんま</rt></ruby>ペガススの<ruby>星座<rt>せいざ</rt></ruby>。4つの2〜3<ruby>等星<rt>とうせい</rt></ruby>がつくる「<ruby>秋<rt>あき</rt></ruby>の<ruby>四辺形<rt>しへんけい</rt></ruby>」は、<ruby>秋<rt>あき</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>をさがす<ruby>大<rt>おお</rt></ruby>きな<ruby>目印<rt>めじるし</rt></ruby>です。',
+        stars: [
+          { x: 0.38, y: 0.30, mag: 2, color: '#fed7aa' },
+          { x: 0.68, y: 0.30, mag: 2, color: '#bae6fd' },
+          { x: 0.68, y: 0.62, mag: 3, color: '#e0f2fe' },
+          { x: 0.38, y: 0.62, mag: 2, color: '#e0f2fe' },
+          { x: 0.22, y: 0.56, mag: 3, color: '#e0f2fe' },
+          { x: 0.14, y: 0.72, mag: 2, color: '#fed7aa' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5]
+        ],
+        starLabels: [
+          { starIdx: 1, text: 'アルフェラッツ', dx: 12, dy: -12, align: 'left' },
+          { starIdx: 3, text: 'マルカブ', dx: 10, dy: 16, align: 'left' }
+        ]
+      },
+      {
+        id: 'andromeda',
+        name: 'あんどろめだざ',
+        kanji: 'アンドロメダ座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 0.85,
+        dec: 37.5,
+        myth: 'くさりで<ruby>岩<rt>いわ</rt></ruby>につながれた<ruby>王女<rt>おうじょ</rt></ruby>アンドロメダの<ruby>星座<rt>せいざ</rt></ruby>。<ruby>秋<rt>あき</rt></ruby>の<ruby>四辺形<rt>しへんけい</rt></ruby>の<ruby>北東<rt>ほくとう</rt></ruby>の<ruby>角<rt>かど</rt></ruby>から<ruby>東<rt>ひがし</rt></ruby>へ<ruby>星<rt>ほし</rt></ruby>が<ruby>並<rt>なら</rt></ruby>び、<ruby>近く<rt>ちかく</rt></ruby>にアンドロメダ<ruby>銀河<rt>ぎんが</rt></ruby>があります。',
+        stars: [
+          { x: 0.24, y: 0.66, mag: 2, color: '#bae6fd' },
+          { x: 0.42, y: 0.54, mag: 3, color: '#e0f2fe' },
+          { x: 0.58, y: 0.44, mag: 2, color: '#fed7aa' },
+          { x: 0.78, y: 0.30, mag: 2, color: '#fed7aa' },
+          { x: 0.50, y: 0.32, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [2, 4]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'アルフェラッツ', dx: -10, dy: 16, align: 'right' },
+          { starIdx: 2, text: 'ミラク', dx: 12, dy: 14, align: 'left' },
+          { starIdx: 3, text: 'アルマク', dx: 12, dy: -10, align: 'left' }
+        ]
+      },
+      {
+        id: 'perseus',
+        name: 'ぺるせうすざ',
+        kanji: 'ペルセウス座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 3.45,
+        dec: 45.0,
+        myth: '<ruby>怪物<rt>かいぶつ</rt></ruby>メドゥーサを<ruby>退治<rt>たいじ</rt></ruby>し、<ruby>王女<rt>おうじょ</rt></ruby>アンドロメダを<ruby>救<rt>すく</rt></ruby>った<ruby>英雄<rt>えいゆう</rt></ruby>ペルセウスの<ruby>星座<rt>せいざ</rt></ruby>。<ruby>毎年<rt>まいとし</rt></ruby>8<ruby>月<rt>がつ</rt></ruby>ごろのペルセウス<ruby>座<rt>ざ</rt></ruby><ruby>流星群<rt>りゅうせいぐん</rt></ruby>で<ruby>有名<rt>ゆうめい</rt></ruby>です。',
+        stars: [
+          { x: 0.46, y: 0.20, mag: 4, color: '#e0f2fe' },
+          { x: 0.50, y: 0.36, mag: 2, color: '#fef9c3' },
+          { x: 0.34, y: 0.48, mag: 2, color: '#bae6fd' },
+          { x: 0.62, y: 0.52, mag: 3, color: '#e0f2fe' },
+          { x: 0.72, y: 0.74, mag: 3, color: '#e0f2fe' },
+          { x: 0.50, y: 0.78, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [1, 3], [3, 4], [3, 5]
+        ],
+        starLabels: [
+          { starIdx: 1, text: 'ミルファク', dx: 14, dy: -8, align: 'left' },
+          { starIdx: 2, text: 'アルゴル', dx: -12, dy: 12, align: 'right' }
+        ]
+      },
+      {
+        id: 'cepheus',
+        name: 'けふぇうすざ',
+        kanji: 'ケフェウス座',
+        season: 'northsouth',
+        seasonLabel: 'きた',
+        isRika: false,
+        ra: 22.10,
+        dec: 70.0,
+        myth: '<ruby>王妃<rt>おうひ</rt></ruby>カシオペヤの<ruby>夫<rt>おっと</rt></ruby>で、アンドロメダの<ruby>父<rt>ちち</rt></ruby>である<ruby>国王<rt>こくおう</rt></ruby>ケフェウスの<ruby>星座<rt>せいざ</rt></ruby>。<ruby>将棋<rt>しょうぎ</rt></ruby>の<ruby>駒<rt>こま</rt></ruby>（おうち）のような<ruby>五角形<rt>ごかくけい</rt></ruby>が<ruby>北<rt>きた</rt></ruby>の<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>えます。',
+        stars: [
+          { x: 0.50, y: 0.20, mag: 3, color: '#fed7aa' },
+          { x: 0.28, y: 0.44, mag: 3, color: '#e0f2fe' },
+          { x: 0.72, y: 0.46, mag: 3, color: '#e0f2fe' },
+          { x: 0.34, y: 0.76, mag: 2, color: '#fef9c3' },
+          { x: 0.68, y: 0.74, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4]
+        ],
+        starLabels: [
+          { starIdx: 3, text: 'アルデラミン', dx: -10, dy: 16, align: 'right' }
+        ]
+      },
+      {
+        id: 'hercules',
+        name: 'へるくれすざ',
+        kanji: 'ヘルクレス座',
+        season: 'summer',
+        seasonLabel: 'なつ',
+        isRika: false,
+        ra: 17.20,
+        dec: 28.0,
+        myth: '12の<ruby>冒険<rt>ぼうけん</rt></ruby>をやりとげたギリシャ<ruby>神話<rt>しんわ</rt></ruby>の<ruby>大英雄<rt>だいえいゆう</rt></ruby>ヘルクレスの<ruby>星座<rt>せいざ</rt></ruby>。<ruby>胴体<rt>どうたい</rt></ruby>の「H<ruby>字<rt>じ</rt></ruby>」の<ruby>形<rt>かたち</rt></ruby>が<ruby>目印<rt>めじるし</rt></ruby>です。',
+        stars: [
+          { x: 0.38, y: 0.36, mag: 3, color: '#e0f2fe' },
+          { x: 0.62, y: 0.34, mag: 3, color: '#fed7aa' },
+          { x: 0.60, y: 0.54, mag: 3, color: '#e0f2fe' },
+          { x: 0.40, y: 0.56, mag: 3, color: '#fed7aa' },
+          { x: 0.32, y: 0.20, mag: 3, color: '#e0f2fe' },
+          { x: 0.68, y: 0.18, mag: 3, color: '#e0f2fe' },
+          { x: 0.50, y: 0.76, mag: 3, color: '#ff9e7d' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [1, 5], [3, 6], [2, 6]
+        ],
+        starLabels: [
+          { starIdx: 6, text: 'ラス・アルゲティ', dx: 0, dy: 18, align: 'center' }
+        ]
+      },
+      {
+        id: 'crux',
+        name: 'みなみじゅうじざ',
+        kanji: 'みなみじゅうじ座',
+        season: 'northsouth',
+        seasonLabel: 'みなみ',
+        isRika: false,
+        ra: 12.45,
+        dec: -60.0,
+        myth: '<ruby>南半球<rt>みなみはんきゅう</rt></ruby>の<ruby>空<rt>そら</rt></ruby>に<ruby>輝<rt>かがや</rt></ruby>く、88<ruby>星座<rt>せいざ</rt></ruby>のなかでいちばん<ruby>小<rt>ちい</rt></ruby>さな<ruby>星座<rt>せいざ</rt></ruby>。<ruby>縦<rt>たて</rt></ruby>の<ruby>星<rt>ほし</rt></ruby>の<ruby>並<rt>なら</rt></ruby>びを<ruby>南<rt>みなみ</rt></ruby>へのばすと<ruby>南天<rt>なんてん</rt></ruby>の<ruby>極<rt>きょく</rt></ruby>がわかります。',
+        stars: [
+          { x: 0.50, y: 0.20, mag: 2, color: '#ff9e7d' },
+          { x: 0.50, y: 0.80, mag: 1, color: '#bae6fd' },
+          { x: 0.28, y: 0.44, mag: 3, color: '#e0f2fe' },
+          { x: 0.72, y: 0.46, mag: 1, color: '#bae6fd' }
+        ],
+        lines: [
+          [0, 1], [2, 3]
+        ],
+        starLabels: [
+          { starIdx: 1, text: 'アクルックス', dx: 14, dy: 8, align: 'left' },
+          { starIdx: 3, text: 'ミモザ', dx: 14, dy: -8, align: 'left' }
+        ]
+      },
+      {
+        id: 'triangulum',
+        name: 'さんかくざ',
+        kanji: 'さんかく座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 2.15,
+        dec: 31.5,
+        myth: '<ruby>細長<rt>ほそなが</rt></ruby>い<ruby>二等辺三角形<rt>にとうへんさんかくけい</rt></ruby>をした<ruby>秋<rt>あき</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。アンドロメダ<ruby>座<rt>ざ</rt></ruby>とおひつじ<ruby>座<rt>ざ</rt></ruby>のあいだに<ruby>並<rt>なら</rt></ruby>んでいます。',
+        stars: [
+          { x: 0.24, y: 0.54, mag: 3, color: '#fef9c3' },
+          { x: 0.72, y: 0.30, mag: 3, color: '#e0f2fe' },
+          { x: 0.76, y: 0.66, mag: 4, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 0]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'モタラー', dx: -12, dy: 8, align: 'right' }
+        ]
+      },
+      {
+        id: 'cetus',
+        name: 'くじらざ',
+        kanji: 'くじら座',
+        season: 'autumn',
+        seasonLabel: 'あき',
+        isRika: false,
+        ra: 1.65,
+        dec: -11.0,
+        myth: '<ruby>秋<rt>あき</rt></ruby>の<ruby>南<rt>みなみ</rt></ruby>の<ruby>空<rt>そら</rt></ruby>に<ruby>横<rt>よこ</rt></ruby>たわる<ruby>巨大<rt>きょだい</rt></ruby>なクジラ（<ruby>海<rt>うみ</rt></ruby>の<ruby>怪物<rt>かいぶつ</rt></ruby>）の<ruby>星座<rt>せいざ</rt></ruby>。<ruby>明<rt>あか</rt></ruby>るさが<ruby>変<rt>か</rt></ruby>わる「ミラ」という<ruby>不思議<rt>ふしぎ</rt></ruby>な<ruby>星<rt>ほし</rt></ruby>があります。',
+        stars: [
+          { x: 0.74, y: 0.28, mag: 3, color: '#fed7aa' },
+          { x: 0.84, y: 0.38, mag: 3, color: '#e0f2fe' },
+          { x: 0.78, y: 0.50, mag: 4, color: '#e0f2fe' },
+          { x: 0.64, y: 0.44, mag: 4, color: '#e0f2fe' },
+          { x: 0.52, y: 0.52, mag: 3, color: '#ff8a65' },
+          { x: 0.34, y: 0.56, mag: 3, color: '#e0f2fe' },
+          { x: 0.18, y: 0.70, mag: 2, color: '#fed7aa' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 4, text: 'ミラ', dx: 0, dy: -14, align: 'center' },
+          { starIdx: 6, text: 'デネブ・カイトス', dx: 10, dy: 14, align: 'left' }
+        ]
+      },
+      {
+        id: 'hydra',
+        name: 'うみへびざ',
+        kanji: 'うみへび座',
+        season: 'spring',
+        seasonLabel: 'はる',
+        isRika: false,
+        ra: 10.50,
+        dec: -17.0,
+        myth: '88<ruby>星座<rt>せいざ</rt></ruby>のなかでいちばん<ruby>長<rt>なが</rt></ruby>くて<ruby>広<rt>ひろ</rt></ruby>い<ruby>星座<rt>せいざ</rt></ruby>。<ruby>心臓<rt>しんぞう</rt></ruby>の<ruby>位置<rt>いち</rt></ruby>に<ruby>赤<rt>あか</rt></ruby>く<ruby>光<rt>ひか</rt></ruby>る2<ruby>等星<rt>とうせい</rt></ruby>「アルファルド（<ruby>孤独<rt>こどく</rt></ruby>なもの）」があります。',
+        stars: [
+          { x: 0.18, y: 0.32, mag: 4, color: '#e0f2fe' },
+          { x: 0.26, y: 0.26, mag: 3, color: '#fef9c3' },
+          { x: 0.28, y: 0.38, mag: 4, color: '#e0f2fe' },
+          { x: 0.38, y: 0.54, mag: 2, color: '#ff9e7d' },
+          { x: 0.54, y: 0.64, mag: 3, color: '#e0f2fe' },
+          { x: 0.70, y: 0.68, mag: 3, color: '#e0f2fe' },
+          { x: 0.84, y: 0.74, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 0], [2, 3], [3, 4], [4, 5], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 3, text: 'アルファルド', dx: -12, dy: 12, align: 'right' }
+        ]
+      },
+      {
+        id: 'corvus',
+        name: 'からすざ',
+        kanji: 'からす座',
+        season: 'spring',
+        seasonLabel: 'はる',
+        isRika: false,
+        ra: 12.40,
+        dec: -18.5,
+        myth: '<ruby>春<rt>はる</rt></ruby>の<ruby>南<rt>みなみ</rt></ruby>の<ruby>空<rt>そら</rt></ruby>に<ruby>見<rt>み</rt></ruby>える<ruby>小<rt>ちい</rt></ruby>さな<ruby>台形<rt>だいけい</rt></ruby>（<ruby>帆<rt>ほ</rt></ruby>かけ<ruby>船<rt>ぶね</rt></ruby>の<ruby>形<rt>かたち</rt></ruby>）の<ruby>星座<rt>せいざ</rt></ruby>。おとめ<ruby>座<rt>ざ</rt></ruby>のスピカのすぐ<ruby>南西<rt>なんせい</rt></ruby>に<ruby>並<rt>なら</rt></ruby>んでいます。',
+        stars: [
+          { x: 0.36, y: 0.32, mag: 3, color: '#bae6fd' },
+          { x: 0.62, y: 0.36, mag: 3, color: '#e0f2fe' },
+          { x: 0.68, y: 0.68, mag: 3, color: '#fef9c3' },
+          { x: 0.30, y: 0.64, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 0]
+        ],
+        starLabels: [
+          { starIdx: 0, text: 'ギエナ', dx: -10, dy: -12, align: 'right' }
+        ]
+      },
+      {
+        id: 'draco',
+        name: 'りゅうざ',
+        kanji: 'りゅう座',
+        season: 'northsouth',
+        seasonLabel: 'きた',
+        isRika: false,
+        ra: 17.00,
+        dec: 65.0,
+        myth: 'おおぐま<ruby>座<rt>ざ</rt></ruby>とこぐま<ruby>座<rt>ざ</rt></ruby>のあいだをくねくねと<ruby>縫<rt>ぬ</rt></ruby>うように<ruby>横<rt>よこ</rt></ruby>たわる<ruby>大<rt>おお</rt></ruby>きな<ruby>竜<rt>りゅう</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>です。',
+        stars: [
+          { x: 0.66, y: 0.24, mag: 3, color: '#fed7aa' },
+          { x: 0.80, y: 0.28, mag: 2, color: '#fed7aa' },
+          { x: 0.78, y: 0.42, mag: 3, color: '#e0f2fe' },
+          { x: 0.64, y: 0.40, mag: 4, color: '#e0f2fe' },
+          { x: 0.50, y: 0.54, mag: 3, color: '#e0f2fe' },
+          { x: 0.34, y: 0.46, mag: 3, color: '#fef9c3' },
+          { x: 0.22, y: 0.64, mag: 3, color: '#e0f2fe' }
+        ],
+        lines: [
+          [0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]
+        ],
+        starLabels: [
+          { starIdx: 1, text: 'エルタニン', dx: 12, dy: -10, align: 'left' }
+        ]
+      },
+      {
+        id: 'lepus',
+        name: 'うさぎざ',
+        kanji: 'うさぎ座',
+        season: 'winter',
+        seasonLabel: 'ふゆ',
+        isRika: false,
+        ra: 5.55,
+        dec: -19.5,
+        myth: '<ruby>狩人<rt>かりうど</rt></ruby>オリオンの<ruby>足元<rt>あしもと</rt></ruby>にちょこんとうずくまる<ruby>小<rt>ちい</rt></ruby>さなウサギの<ruby>星座<rt>せいざ</rt></ruby>。4つの<ruby>星<rt>ほし</rt></ruby>の<ruby>四角形<rt>しかくけい</rt></ruby>と<ruby>長<rt>なが</rt></ruby>い<ruby>耳<rt>みみ</rt></ruby>が<ruby>見<rt>み</rt></ruby>えます。',
+        stars: [
+          { x: 0.28, y: 0.24, mag: 4, color: '#e0f2fe' },
+          { x: 0.36, y: 0.22, mag: 4, color: '#e0f2fe' },
+          { x: 0.42, y: 0.44, mag: 3, color: '#fef9c3' },
+          { x: 0.62, y: 0.46, mag: 3, color: '#e0f2fe' },
+          { x: 0.66, y: 0.68, mag: 3, color: '#e0f2fe' },
+          { x: 0.40, y: 0.68, mag: 3, color: '#fed7aa' }
+        ],
+        lines: [
+          [0, 2], [1, 2], [2, 3], [3, 4], [4, 5], [5, 2]
+        ],
+        starLabels: [
+          { starIdx: 2, text: 'アルネブ', dx: -12, dy: 0, align: 'right' }
+        ]
+      }
+    ];
+
+    // 季節の並び順（春 → 夏 → 秋 → 冬 → 北・南の空）
+    const SEASON_ORDER = {
+      spring: 1,
+      summer: 2,
+      autumn: 3,
+      winter: 4,
+      northsouth: 5
+    };
+
+    // 黄道12星座の並び順（おひつじ座 → うお座）
+    const ZODIAC_IDS = [
+      'aries',
+      'taurus',
+      'gemini',
+      'cancer',
+      'leo',
+      'virgo',
+      'libra',
+      'scorpius',
+      'sagittarius',
+      'capricornus',
+      'aquarius',
+      'pisces'
+    ];
+
+    /**
+     * 3. フリック＆連続タップひらがな入力テーブル
+     */
+    const FLICK_ROWS = {
+      'あ': ['あ', 'い', 'う', 'え', 'お'],
+      'か': ['か', 'き', 'く', 'け', 'こ'],
+      'さ': ['さ', 'し', 'す', 'せ', 'そ'],
+      'た': ['た', 'ち', 'つ', 'て', 'と'],
+      'な': ['な', 'に', 'ぬ', 'ね', 'の'],
+      'は': ['は', 'ひ', 'ふ', 'へ', 'ほ'],
+      'ま': ['ま', 'み', 'む', 'め', 'も'],
+      'や': ['や', '「', 'ゆ', '」', 'よ'],
+      'ら': ['ら', 'り', 'る', 'れ', 'ろ'],
+      'わ': ['わ', 'を', 'ん', 'ー', '〜']
+    };
+
+    // 濁点・半濁点・小文字の循環変換マップ
+    const CHAR_CYCLE_MAP = {
+      'か': 'が', 'が': 'か',
+      'き': 'ぎ', 'ぎ': 'き',
+      'く': 'ぐ', 'ぐ': 'く',
+      'け': 'げ', 'げ': 'け',
+      'こ': 'ご', 'ご': 'こ',
+      'さ': 'ざ', 'ざ': 'さ',
+      'し': 'じ', 'じ': 'し',
+      'す': 'ず', 'ず': 'す',
+      'せ': 'ぜ', 'ぜ': 'せ',
+      'そ': 'ぞ', 'ぞ': 'そ',
+      'た': 'だ', 'だ': 'た',
+      'ち': 'ぢ', 'ぢ': 'ち',
+      'つ': 'っ', 'っ': 'づ', 'づ': 'つ',
+      'て': 'で', 'で': 'て',
+      'と': 'ど', 'ど': 'と',
+      'は': 'ば', 'ば': 'ぱ', 'ぱ': 'は',
+      'ひ': 'び', 'び': 'ぴ', 'ぴ': 'ひ',
+      'ふ': 'ぶ', 'ぶ': 'ぷ', 'ぷ': 'ふ',
+      'へ': 'べ', 'べ': 'ぺ', 'ぺ': 'へ',
+      'ほ': 'ぼ', 'ぼ': 'ぽ', 'ぽ': 'ほ',
+      'あ': 'ぁ', 'ぁ': 'あ',
+      'い': 'ぃ', 'ぃ': 'い',
+      'う': 'ぅ', 'ぅ': 'ゔ', 'ゔ': 'う',
+      'え': 'ぇ', 'ぇ': 'え',
+      'お': 'ぉ', 'ぉ': 'お',
+      'や': 'ゃ', 'ゃ': 'や',
+      'ゆ': 'ゅ', 'ゅ': 'ゆ',
+      'よ': 'ょ', 'ょ': 'よ',
+      'わ': 'ゎ', 'ゎ': 'わ'
+    };
+
+    /**
+     * 4. ローマ字 → ひらがな変換辞書
+     */
+    const ROMAJI_TO_HIRAGANA = {
+      'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
+      'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
+      'ca': 'か', 'cu': 'く', 'co': 'こ',
+      'ga': 'が', 'gi': 'ぎ', 'gu': 'ぐ', 'ge': 'げ', 'go': 'ご',
+      'sa': 'さ', 'si': 'し', 'shi': 'し', 'su': 'す', 'se': 'せ', 'so': 'そ',
+      'za': 'ざ', 'zi': 'じ', 'ji': 'じ', 'zu': 'ず', 'ze': 'ぜ', 'zo': 'ぞ',
+      'ta': 'た', 'ti': 'ち', 'chi': 'ち', 'tu': 'つ', 'tsu': 'つ', 'te': 'て', 'to': 'と',
+      'da': 'だ', 'di': 'ぢ', 'du': 'づ', 'de': 'で', 'do': 'ど',
+      'na': 'な', 'ni': 'に', 'nu': 'ぬ', 'ne': 'ね', 'no': 'の',
+      'ha': 'は', 'hi': 'ひ', 'hu': 'ふ', 'fu': 'ふ', 'he': 'へ', 'ho': 'ほ',
+      'ba': 'ば', 'bi': 'び', 'bu': 'ぶ', 'be': 'べ', 'bo': 'ぼ',
+      'pa': 'ぱ', 'pi': 'ぴ', 'pu': 'ぷ', 'pe': 'ぺ', 'po': 'ぽ',
+      'ma': 'ま', 'mi': 'み', 'mu': 'む', 'me': 'め', 'mo': 'も',
+      'ya': 'や', 'yu': 'ゆ', 'yo': 'よ',
+      'ra': 'ら', 'ri': 'り', 'ru': 'る', 're': 'れ', 'ro': 'ろ',
+      'la': 'ら', 'li': 'り', 'lu': 'る', 'le': 'れ', 'lo': 'ろ',
+      'wa': 'わ', 'wi': 'うぃ', 'we': 'うぇ', 'wo': 'を',
+      'nn': 'ん', "n'": 'ん',
+      'kya': 'きゃ', 'kyu': 'きゅ', 'kyo': 'きょ',
+      'gya': 'ぎゃ', 'gyu': 'ぎゅ', 'gyo': 'ぎょ',
+      'sya': 'しゃ', 'sha': 'しゃ', 'syu': 'しゅ', 'shu': 'しゅ', 'syo': 'しょ', 'sho': 'しょ',
+      'zya': 'じゃ', 'ja': 'じゃ', 'jya': 'じゃ', 'zyu': 'じゅ', 'ju': 'じゅ', 'jyu': 'じゅ', 'zyo': 'じょ', 'jo': 'じょ', 'jyo': 'じょ',
+      'tya': 'ちゃ', 'cha': 'ちゃ', 'tyu': 'ちゅ', 'chu': 'ちゅ', 'tyo': 'ちょ', 'cho': 'ちょ',
+      'nya': 'にゃ', 'nyu': 'にゅ', 'nyo': 'にょ',
+      'hya': 'ひゃ', 'hyu': 'ひゅ', 'hyo': 'ひょ',
+      'bya': 'びゃ', 'byu': 'びゅ', 'byo': 'びょ',
+      'pya': 'ぴゃ', 'pyu': 'ぴゅ', 'pyo': 'ぴょ',
+      'mya': 'みゃ', 'myu': 'みゅ', 'myo': 'みょ',
+      'rya': 'りゃ', 'ryu': 'りゅ', 'ryo': 'りょ',
+      'fa': 'ふぁ', 'fi': 'ふぃ', 'fe': 'ふぇ', 'fo': 'ふぉ',
+      'xa': 'ぁ', 'xi': 'ぃ', 'xu': 'ぅ', 'xe': 'ぇ', 'xo': 'ぉ',
+      'xya': 'ゃ', 'xyu': 'ゅ', 'xyo': 'ょ', 'xtu': 'っ', 'xtsu': 'っ', 'ltsu': 'っ',
+      '-': 'ー'
+    };
+
+    const ROMAJI_KEYS = Object.keys(ROMAJI_TO_HIRAGANA);
+
+    /**
+     * 5. アプリケーション状態管理
+     */
+    const STORAGE_KEY = 'seiza_zukan_completed_v1';
+
+    function loadCompletedIds() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr)) return new Set(arr);
+        }
+      } catch (e) {
+        // ストレージ制限環境ではメモリのみ使用
+      }
+      return new Set();
+    }
+
+    function saveCompletedIds(set) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
+      } catch (e) {
+        // 無視
+      }
+    }
+
+    const state = {
+      currentView: 'zukan',
+      filter: 'all',
+      completedIds: loadCompletedIds(),
+      currentConstellation: null,
+      connectedLines: new Set(),
+      typedChars: [],
+      showFirstCharHint: false,
+      romajiBuffer: '',
+      // 連続タップ入力用
+      lastToggleKey: null,
+      lastToggleIndex: 0,
+      lastToggleTime: 0,
+      isPendingToggle: false,
+      toggleCommitTimer: null,
+      // ドラッグ＆タップ線結び用
+      isDraggingStar: false,
+      dragStartStarIdx: -1,
+      selectedStarIdx: -1,
+      dragPointerPos: { x: 0, y: 0 },
+      hoveredStarIdx: -1,
+      // 演出用
+      particles: [],
+      errorFlashLine: null,
+      isCompletedCelebration: false,
+      celebrationAlpha: 0,
+      celebrationTimer: null,
+      wrongResetTimer: null,
+      isResettingWrong: false,
+      keypadVisible: true,
+      showSurroundings: false,
+      currentZoom: 1.0,
+      surroundItemsCache: [],
+      surroundHitTargets: [],
+      _notifiedLinesDone: false,
+      _notifiedNameDone: false
+    };
+
+    /**
+     * 6. 背景のきらめく小星データ＆DOM要素参照
+     */
+    const BG_STARS = Array.from({ length: 90 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: 0.6 + Math.random() * 1.4,
+      phase: Math.random() * Math.PI * 2
+    }));
+
+    const elViewZukan = document.getElementById('view-zukan');
+    const elViewPlay = document.getElementById('view-play');
+    const elZukanGrid = document.getElementById('zukan-grid');
+    const elZukanCount = document.getElementById('zukan-count');
+    const elZukanTotalCount = document.getElementById('zukan-total-count');
+    const elZukanProgressBar = document.getElementById('zukan-progress-bar');
+    const elPlayZukanBadge = document.getElementById('play-zukan-badge');
+
+    const elSkyStage = document.getElementById('sky-stage');
+    const elStarCanvas = document.getElementById('star-canvas');
+    const starCtx = elStarCanvas.getContext('2d');
+    const elGuideCanvas = document.getElementById('guide-canvas');
+    const guideCtx = elGuideCanvas.getContext('2d');
+    const elSeasonTag = document.getElementById('season-tag');
+
+    const elLineProgressText = document.getElementById('line-progress-text');
+    const elLineDoneBadge = document.getElementById('line-done-badge');
+    const elNameProgressText = document.getElementById('name-progress-text');
+    const elNameDoneCircle = document.getElementById('name-done-circle');
+    const elPanelNameCircle = document.getElementById('panel-name-circle');
+    const elNameCorrectCircleOverlay = document.getElementById('name-correct-circle-overlay');
+
+    const elNameInputContainer = document.getElementById('name-input-container');
+    const elRomajiBufferBadge = document.getElementById('romaji-buffer-badge');
+    const elRomajiBufferText = document.getElementById('romaji-buffer-text');
+    const elMythText = document.getElementById('myth-text');
+    const elConstellationKanjiHint = document.getElementById('constellation-kanji-hint');
+
+    const elBtnToggleKeypad = document.getElementById('btn-toggle-keypad');
+    const elMobileKeypadWrapper = document.getElementById('mobile-keypad-wrapper');
+    const elBtnToggleSurround = document.getElementById('btn-toggle-surround');
+    const elSurroundModeBanner = document.getElementById('surround-mode-banner');
+    const elToastMessage = document.getElementById('toast-message');
+
+    const elCompleteModal = document.getElementById('complete-modal');
+    const elModalName = document.getElementById('modal-constellation-name');
+    const elModalKanji = document.getElementById('modal-constellation-kanji');
+    const elModalZukanCount = document.getElementById('modal-zukan-count');
+    const elModalTotalCount = document.getElementById('modal-total-count');
+    const elModalProgressBar = document.getElementById('modal-progress-bar');
+    const elModalEncouragement = document.getElementById('modal-encouragement');
+
+    /**
+     * 7. 図鑑フィルタリング＆一覧描画
+     */
+    function getFilteredConstellations(filter) {
+      let list = [];
+      if (filter === 'all') {
+        list = [...CONSTELLATIONS].sort((a, b) => (SEASON_ORDER[a.season] || 99) - (SEASON_ORDER[b.season] || 99));
+      } else if (filter === 'rika') {
+        list = CONSTELLATIONS.filter(c => c.isRika).sort((a, b) => (SEASON_ORDER[a.season] || 99) - (SEASON_ORDER[b.season] || 99));
+      } else if (filter === 'zodiac') {
+        list = CONSTELLATIONS.filter(c => ZODIAC_IDS.includes(c.id))
+          .sort((a, b) => ZODIAC_IDS.indexOf(a.id) - ZODIAC_IDS.indexOf(b.id));
+      } else {
+        list = CONSTELLATIONS.filter(c => c.season === filter);
+      }
+      return list;
+    }
+
+    function updateZukanProgressUI() {
+      const total = CONSTELLATIONS.length;
+      const done = state.completedIds.size;
+      const pct = Math.round((done / total) * 100);
+
+      elZukanCount.textContent = done;
+      elZukanTotalCount.textContent = total;
+      elZukanProgressBar.style.width = `${pct}%`;
+      elPlayZukanBadge.textContent = `${done}/${total}`;
+
+      const btnAll = document.getElementById('filter-btn-all');
+      if (btnAll) {
+        btnAll.textContent = `すべて (${total})`;
+      }
+    }
+
+    function drawCardThumbnail(canvas, constel, isDone) {
+      const dpr = window.devicePixelRatio || 1;
+      const size = 92;
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
+      canvas.width = Math.floor(size * dpr);
+      canvas.height = Math.floor(size * dpr);
+
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, size, size);
+
+      const pad = 14;
+      const inner = size - pad * 2;
+
+      ctx.strokeStyle = isDone ? 'rgba(250, 204, 21, 0.85)' : 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = isDone ? 1.8 : 1.2;
+      ctx.lineCap = 'round';
+      constel.lines.forEach(([a, b]) => {
+        const sa = constel.stars[a];
+        const sb = constel.stars[b];
+        if (!sa || !sb) return;
+        ctx.beginPath();
+        ctx.moveTo(pad + sa.x * inner, pad + sa.y * inner);
+        ctx.lineTo(pad + sb.x * inner, pad + sb.y * inner);
+        ctx.stroke();
+      });
+
+      constel.stars.forEach(s => {
+        const sx = pad + s.x * inner;
+        const sy = pad + s.y * inner;
+        const r = s.mag === 1 ? 3.2 : s.mag === 2 ? 2.4 : 1.8;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.fillStyle = isDone ? (s.color || '#fef08a') : '#bae6fd';
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    function renderZukanGrid() {
+      updateZukanProgressUI();
+      const list = getFilteredConstellations(state.filter);
+      elZukanGrid.innerHTML = '';
+
+      const seasonColors = {
+        spring: 'bg-pink-500/25 text-pink-200 border-pink-400/30',
+        summer: 'bg-emerald-500/25 text-emerald-200 border-emerald-400/30',
+        autumn: 'bg-amber-500/25 text-amber-200 border-amber-400/30',
+        winter: 'bg-cyan-500/25 text-cyan-200 border-cyan-400/30',
+        northsouth: 'bg-purple-500/25 text-purple-200 border-purple-400/30'
+      };
+
+      list.forEach(constel => {
+        const isDone = state.completedIds.has(constel.id);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `group relative rounded-2xl p-3 flex flex-col items-center text-center transition active:scale-95 border ${
+          isDone
+            ? 'bg-gradient-to-b from-slate-800/95 to-indigo-950/90 border-amber-400/60 shadow-[0_0_20px_rgba(251,191,36,0.18)]'
+            : 'bg-slate-900/80 hover:bg-slate-800/90 border-blue-400/20 hover:border-blue-300/50'
+        }`;
+
+        const topRow = document.createElement('div');
+        topRow.className = 'w-full flex items-center justify-between gap-1 mb-1.5';
+
+        const seasonBadge = document.createElement('span');
+        seasonBadge.className = `text-[10px] px-2 py-0.5 rounded-full border font-bold ${seasonColors[constel.season] || 'bg-slate-700 text-slate-200'}`;
+        seasonBadge.textContent = constel.seasonLabel;
+        topRow.appendChild(seasonBadge);
+
+        if (isDone) {
+          const doneTag = document.createElement('span');
+          doneTag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/50 text-amber-300 font-extrabold';
+          doneTag.textContent = '○ ずみ';
+          topRow.appendChild(doneTag);
+        } else if (constel.isRika) {
+          const rikaTag = document.createElement('span');
+          rikaTag.className = 'text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-300/30 text-blue-200 font-bold';
+          rikaTag.textContent = '教科書';
+          topRow.appendChild(rikaTag);
+        }
+
+        card.appendChild(topRow);
+
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'w-[92px] h-[92px] rounded-xl bg-slate-950/90 border border-blue-400/15 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform';
+        const thumbCanvas = document.createElement('canvas');
+        drawCardThumbnail(thumbCanvas, constel, isDone);
+        thumbWrap.appendChild(thumbCanvas);
+        card.appendChild(thumbWrap);
+
+        const kanjiEl = document.createElement('div');
+        kanjiEl.className = 'text-xs sm:text-sm font-extrabold text-white leading-snug';
+        kanjiEl.textContent = constel.kanji;
+        card.appendChild(kanjiEl);
+
+        const kanaEl = document.createElement('div');
+        kanaEl.className = 'text-[11px] text-blue-200/80 font-medium mt-0.5';
+        kanaEl.textContent = constel.name;
+        card.appendChild(kanaEl);
+
+        card.addEventListener('click', () => {
+          sound.init();
+          sound.playKeyPop();
+          openConstellationPlay(constel.id);
+        });
+
+        elZukanGrid.appendChild(card);
+      });
+    }
+
+    /**
+     * 8. トースト通知＆プレイ画面オープン処理
+     */
+    let toastTimer = null;
+    function showToast(message, duration = 2200) {
+      if (!elToastMessage) return;
+      elToastMessage.textContent = message;
+      elToastMessage.classList.remove('hidden', 'opacity-0');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        elToastMessage.classList.add('opacity-0');
+        setTimeout(() => {
+          elToastMessage.classList.add('hidden');
+        }, 300);
+      }, duration);
+    }
+
+    function openConstellationPlay(constelId) {
+      const constel = CONSTELLATIONS.find(c => c.id === constelId) || CONSTELLATIONS[0];
+      state.currentConstellation = constel;
+      state.currentView = 'play';
+      state.connectedLines = new Set();
+      state.typedChars = [];
+      state.showFirstCharHint = false;
+      state.romajiBuffer = '';
+      state.lastToggleKey = null;
+      state.lastToggleIndex = 0;
+      state.lastToggleTime = 0;
+      state.isPendingToggle = false;
+      if (state.toggleCommitTimer) {
+        clearTimeout(state.toggleCommitTimer);
+        state.toggleCommitTimer = null;
+      }
+      state.isDraggingStar = false;
+      state.dragStartStarIdx = -1;
+      state.selectedStarIdx = -1;
+      state.hoveredStarIdx = -1;
+      state.particles = [];
+      state.errorFlashLine = null;
+      state.isCompletedCelebration = false;
+      state.celebrationAlpha = 0;
+
+      if (state.celebrationTimer) {
+        clearTimeout(state.celebrationTimer);
+        state.celebrationTimer = null;
+      }
+      clearWrongResetTimer();
+      state.isResettingWrong = false;
+      state.showSurroundings = false;
+      state.currentZoom = 1.0;
+      state.surroundItemsCache = getSurroundingConstellations(constel);
+      state.surroundHitTargets = [];
+      updateSurroundButtonUI();
+      state._notifiedLinesDone = false;
+      state._notifiedNameDone = false;
+
+      elCompleteModal.classList.add('hidden');
+      elViewZukan.classList.add('hidden');
+      elViewPlay.classList.remove('hidden');
+
+      elSeasonTag.textContent = constel.seasonLabel;
+      elMythText.innerHTML = constel.myth;
+      elConstellationKanjiHint.textContent = '';
+
+      resizePlayCanvases();
+      renderNameInputSlots();
+      updatePlayStatusUI();
+      updateZukanProgressUI();
+      showToast('ほしから ほしへ ゆびで なぞって つなごう！', 2400);
+    }
+
+    /**
+     * 9. 図鑑画面へ戻る処理
+     */
+    function switchToZukanView() {
+      state.currentView = 'zukan';
+      if (state.celebrationTimer) {
+        clearTimeout(state.celebrationTimer);
+        state.celebrationTimer = null;
+      }
+      clearWrongResetTimer();
+      state.isResettingWrong = false;
+      elCompleteModal.classList.add('hidden');
+      elViewPlay.classList.add('hidden');
+      elViewZukan.classList.remove('hidden');
+      renderZukanGrid();
+    }
+
+    /**
+     * 10. 名前入力スロット描画＆進捗判定
+     */
+    function clearWrongResetTimer() {
+      if (state.wrongResetTimer) {
+        clearTimeout(state.wrongResetTimer);
+        state.wrongResetTimer = null;
+      }
+    }
+
+    // 最後の文字を「゛゜小」キーで変化させれば正解の最後の文字になり得るか判定
+    function canLastCharBecomeExpected(currentChar, expectedChar) {
+      if (!currentChar || !expectedChar || currentChar === expectedChar) return false;
+      let ch = currentChar;
+      for (let step = 0; step < 3; step++) {
+        ch = CHAR_CYCLE_MAP[ch];
+        if (!ch) return false;
+        if (ch === expectedChar) return true;
+      }
+      return false;
+    }
+
+    // 全文字入力後に不正解だった場合、赤く震えてから白紙に戻す
+    function scheduleWrongNameReset(delayMs = 550) {
+      if (state.isResettingWrong) return;
+      clearWrongResetTimer();
+      state.isResettingWrong = true;
+      commitPendingToggle();
+      sound.playKeyMiss();
+      renderNameInputSlots(-2);
+      showToast('ちがうよ！もういちど にゅうりょくしよう！', 2000);
+
+      state.wrongResetTimer = setTimeout(() => {
+        state.wrongResetTimer = null;
+        state.isResettingWrong = false;
+        if (state.currentView !== 'play' || isNameFullyMatched()) return;
+        state.typedChars = [];
+        state.romajiBuffer = '';
+        state.lastToggleKey = null;
+        state.lastToggleIndex = 0;
+        state.isPendingToggle = false;
+        renderNameInputSlots();
+        updatePlayStatusUI();
+      }, delayMs);
+    }
+
+    // すべての文字が入力されたときの正解・不正解判定
+    function evaluateFullNameEntry({ isFromMultiTap = false, isFromRomaji = false } = {}) {
+      const constel = state.currentConstellation;
+      if (!constel) return;
+      const target = constel.name;
+      if (state.typedChars.length < target.length) return;
+
+      if (isNameFullyMatched()) {
+        clearWrongResetTimer();
+        return;
+      }
+
+      // ローマ字入力は濁点待ち不要のため、最後の文字が表示されてからリセット演出へ
+      if (isFromRomaji) {
+        scheduleWrongNameReset(650);
+        return;
+      }
+
+      // 連続タップ（あ→い→う、か→き→く等）の途中は、次のタップ待ち時間（1.55秒）を確保してから判定
+      if (isFromMultiTap && state.isPendingToggle) {
+        clearWrongResetTimer();
+        state.wrongResetTimer = setTimeout(() => {
+          state.wrongResetTimer = null;
+          commitPendingToggle();
+          if (state.currentView !== 'play' || isNameFullyMatched()) return;
+          if (state.typedChars.length >= target.length) {
+            const lastChar = state.typedChars[target.length - 1];
+            const expectedLast = target[target.length - 1];
+            if (canLastCharBecomeExpected(lastChar, expectedLast)) {
+              // 濁点・半濁点・小文字入力の猶予を3.5秒待つ
+              state.wrongResetTimer = setTimeout(() => {
+                state.wrongResetTimer = null;
+                if (state.currentView === 'play' && !isNameFullyMatched() && state.typedChars.length >= target.length) {
+                  scheduleWrongNameReset(600);
+                }
+              }, 3500);
+            } else {
+              scheduleWrongNameReset(600);
+            }
+          }
+        }, 1550);
+        return;
+      }
+
+      // フリック確定・濁点変換後：最後の文字にまだ濁点等をつければ正解の末字になる場合は猶予を与える
+      const lastChar = state.typedChars[target.length - 1];
+      const expectedLast = target[target.length - 1];
+      if (canLastCharBecomeExpected(lastChar, expectedLast)) {
+        clearWrongResetTimer();
+        state.wrongResetTimer = setTimeout(() => {
+          state.wrongResetTimer = null;
+          if (state.currentView === 'play' && !isNameFullyMatched() && state.typedChars.length >= target.length) {
+            scheduleWrongNameReset(600);
+          }
+        }, 3500);
+        return;
+      }
+
+      // すべての文字が確定して違っている場合は白紙に戻す
+      scheduleWrongNameReset(650);
+    }
+
+    function isNameFullyMatched() {
+      const constel = state.currentConstellation;
+      if (!constel) return false;
+      return state.typedChars.join('') === constel.name;
+    }
+
+    function renderNameInputSlots(shakeIdx = -1) {
+      const constel = state.currentConstellation;
+      if (!constel) return;
+
+      const target = constel.name;
+      const len = target.length;
+      const matched = isNameFullyMatched();
+
+      elNameInputContainer.innerHTML = '';
+
+      for (let i = 0; i < len; i++) {
+        const expectedChar = target[i];
+        const typedChar = state.typedChars[i];
+        const isCurrentCursor = !matched && !state.isResettingWrong && (
+          (state.isPendingToggle && i === state.typedChars.length - 1) ||
+          (!state.isPendingToggle && i === state.typedChars.length)
+        );
+
+        const slot = document.createElement('div');
+        let slotClass = 'w-9 h-10 sm:w-10 sm:h-11 rounded-xl border-2 flex items-center justify-center text-lg sm:text-xl font-extrabold transition-all ';
+
+        if (shakeIdx === -2 && typedChar !== undefined) {
+          // 全文字入力後・不正解リセット前の赤シェイク表示
+          slotClass += 'bg-rose-500/30 border-rose-400 text-rose-100 animate-shake shadow-[0_0_12px_rgba(244,63,94,0.45)]';
+        } else if (typedChar !== undefined) {
+          if (typedChar === expectedChar) {
+            slotClass += 'bg-emerald-500/25 border-emerald-400 text-white shadow-[0_0_10px_rgba(52,211,153,0.3)]';
+          } else {
+            // 濁点・半濁点変換待ち、または仮入力中の文字
+            slotClass += 'bg-cyan-500/25 border-cyan-300 text-cyan-100 shadow-[0_0_10px_rgba(34,211,238,0.35)]';
+          }
+        } else {
+          slotClass += 'bg-slate-950/80 border-slate-600/80 text-slate-400/60';
+        }
+
+        if (isCurrentCursor) {
+          slotClass += ' active-char-slot';
+        }
+        if (i === shakeIdx) {
+          slotClass += ' animate-shake border-rose-400';
+        }
+
+        slot.className = slotClass;
+
+        if (typedChar !== undefined) {
+          slot.textContent = typedChar;
+        } else if (i === 0 && state.showFirstCharHint) {
+          // 1文字ヒントボタンを押したときだけ最初の1文字を薄いグレーで表示
+          slot.textContent = expectedChar;
+        } else {
+          slot.textContent = '';
+        }
+
+        elNameInputContainer.appendChild(slot);
+      }
+
+      // ローマ字バッファ表示
+      if (state.romajiBuffer.length > 0) {
+        elRomajiBufferBadge.classList.remove('hidden');
+        elRomajiBufferText.textContent = state.romajiBuffer;
+      } else {
+        elRomajiBufferBadge.classList.add('hidden');
+      }
+    }
+
+    function updatePlayStatusUI() {
+      const constel = state.currentConstellation;
+      if (!constel) return;
+
+      const totalLines = constel.lines.length;
+      const doneLines = state.connectedLines.size;
+      const isLinesDone = doneLines >= totalLines;
+
+      elLineProgressText.textContent = `${doneLines} / ${totalLines}`;
+      if (isLinesDone) {
+        elLineDoneBadge.classList.remove('hidden');
+        if (!state._notifiedLinesDone) {
+          state._notifiedLinesDone = true;
+          sound.playConstellationClear();
+          showToast('ほしが ぜんぶ つながったよ！ ○');
+        }
+      } else {
+        elLineDoneBadge.classList.add('hidden');
+      }
+
+      // 正しく一致している文字数をカウント
+      const totalChars = constel.name.length;
+      let correctCharCount = 0;
+      for (let i = 0; i < totalChars; i++) {
+        if (state.typedChars[i] === constel.name[i]) {
+          correctCharCount++;
+        }
+      }
+      const isNameDone = isNameFullyMatched();
+
+      elNameProgressText.textContent = `${correctCharCount} / ${totalChars}`;
+      if (isNameDone) {
+        elNameDoneCircle.classList.remove('hidden');
+        elPanelNameCircle.classList.remove('hidden');
+        elNameCorrectCircleOverlay.classList.remove('hidden');
+        elNameCorrectCircleOverlay.classList.add('animate-name-circle');
+        elConstellationKanjiHint.textContent = `（${constel.kanji}）`;
+        if (!state._notifiedNameDone) {
+          state._notifiedNameDone = true;
+          // 星座をなぞる問題と同じ正答効果音を鳴らす
+          sound.playConstellationClear();
+          showToast('せいかい！せいざの なまえが そろったよ！ ○');
+        }
+      } else {
+        elNameDoneCircle.classList.add('hidden');
+        elPanelNameCircle.classList.add('hidden');
+        elNameCorrectCircleOverlay.classList.add('hidden');
+        elNameCorrectCircleOverlay.classList.remove('animate-name-circle');
+        elConstellationKanjiHint.textContent = '';
+      }
+
+      // 両方達成で図鑑登録＆お祝いモーダル（1秒待ってから表示）
+      if (isLinesDone && isNameDone && !state.isCompletedCelebration) {
+        state.isCompletedCelebration = true;
+        state.completedIds.add(constel.id);
+        saveCompletedIds(state.completedIds);
+        updateZukanProgressUI();
+        // 直前の星つなぎ・名前正解の効果音と重ならないよう少しずらしてファンファーレを再生
+        setTimeout(() => {
+          if (state.currentView === 'play' && state.isCompletedCelebration) {
+            sound.playComplete();
+          }
+        }, 280);
+
+        // 夜空の中央付近に祝福の星パーティクルを散らす
+        const rect = elStarCanvas.getBoundingClientRect();
+        spawnParticles(rect.width * 0.5, rect.height * 0.48, 28, '#fde047');
+
+        state.celebrationTimer = setTimeout(() => {
+          state.celebrationTimer = null;
+          if (state.currentView !== 'play' || !state.isCompletedCelebration) return;
+          elModalName.textContent = constel.name;
+          elModalKanji.textContent = `（${constel.kanji}）`;
+          const total = CONSTELLATIONS.length;
+          const done = state.completedIds.size;
+          const pct = Math.round((done / total) * 100);
+          elModalZukanCount.textContent = done;
+          elModalTotalCount.textContent = total;
+          elModalProgressBar.style.width = `${pct}%`;
+
+          if (done === total) {
+            elModalEncouragement.textContent = '🎉 すごい！ぜんぶの せいざを コンプリートしたよ！';
+          } else {
+            elModalEncouragement.textContent = `やったね！あと ${total - done} こで ずかん コンプリートだよ！`;
+          }
+          elCompleteModal.classList.remove('hidden');
+        }, 1000);
+      }
+    }
+
+    /**
+     * 11. ひらがな入力処理（フリック・連続タップ・濁点変換・ローマ字）
+     */
+    function commitPendingToggle() {
+      if (state.toggleCommitTimer) {
+        clearTimeout(state.toggleCommitTimer);
+        state.toggleCommitTimer = null;
+      }
+      state.isPendingToggle = false;
+    }
+
+    function scheduleToggleAutoCommit() {
+      if (state.toggleCommitTimer) {
+        clearTimeout(state.toggleCommitTimer);
+      }
+      state.toggleCommitTimer = setTimeout(() => {
+        state.toggleCommitTimer = null;
+        if (state.isPendingToggle) {
+          state.isPendingToggle = false;
+          if (state.currentView === 'play' && !state.isResettingWrong) {
+            renderNameInputSlots();
+          }
+        }
+      }, 1400);
+    }
+
+    function insertHiraganaChar(char, { fromMultiTap = false, fromRomaji = false } = {}) {
+      const constel = state.currentConstellation;
+      if (!constel || state.isCompletedCelebration || isNameFullyMatched() || state.isResettingWrong) return;
+
+      clearWrongResetTimer();
+      const target = constel.name;
+
+      if (fromMultiTap && state.isPendingToggle && state.typedChars.length > 0) {
+        // 連続タップ中は最後の文字を置き換える
+        state.typedChars[state.typedChars.length - 1] = char;
+        scheduleToggleAutoCommit();
+      } else {
+        commitPendingToggle();
+        if (state.typedChars.length >= target.length) {
+          // すでに文字数いっぱいの場合は最後の枠の文字を置き換える
+          state.typedChars[target.length - 1] = char;
+        } else {
+          state.typedChars.push(char);
+        }
+        if (fromMultiTap) {
+          state.isPendingToggle = true;
+          scheduleToggleAutoCommit();
+        }
+      }
+
+      const matchedNow = isNameFullyMatched();
+      const isFullWrongImmediate =
+        !matchedNow &&
+        state.typedChars.length >= target.length &&
+        (fromRomaji || (!fromMultiTap && !canLastCharBecomeExpected(state.typedChars[target.length - 1], target[target.length - 1])));
+
+      // 正解時・即誤答リセット時はキー押下音を鳴らさず専用効果音（正答チャイム／震え音）を優先する
+      if (!matchedNow && !isFullWrongImmediate) {
+        sound.playKeyPop();
+      }
+      renderNameInputSlots();
+      updatePlayStatusUI();
+      evaluateFullNameEntry({ isFromMultiTap: fromMultiTap, isFromRomaji: fromRomaji });
+    }
+
+    function applyDakutenCycle() {
+      const constel = state.currentConstellation;
+      if (!constel || state.isCompletedCelebration || isNameFullyMatched() || state.isResettingWrong) return;
+
+      clearWrongResetTimer();
+      commitPendingToggle();
+      if (state.typedChars.length === 0) {
+        sound.playKeyMiss();
+        return;
+      }
+
+      const lastIdx = state.typedChars.length - 1;
+      const currentChar = state.typedChars[lastIdx];
+      const nextChar = CHAR_CYCLE_MAP[currentChar];
+
+      if (nextChar) {
+        state.typedChars[lastIdx] = nextChar;
+        const matchedNow = isNameFullyMatched();
+        const isFullWrongImmediate =
+          !matchedNow &&
+          state.typedChars.length >= constel.name.length &&
+          !canLastCharBecomeExpected(nextChar, constel.name[constel.name.length - 1]);
+
+        if (!matchedNow && !isFullWrongImmediate) {
+          sound.playKeyPop();
+        }
+        renderNameInputSlots();
+        updatePlayStatusUI();
+        evaluateFullNameEntry({ isFromMultiTap: false, isFromRomaji: false });
+      } else {
+        sound.playKeyMiss();
+        renderNameInputSlots(lastIdx);
+        evaluateFullNameEntry({ isFromMultiTap: false, isFromRomaji: false });
+      }
+    }
+
+    function deleteLastChar() {
+      if (state.isCompletedCelebration || state.isResettingWrong) return;
+
+      clearWrongResetTimer();
+      if (state.romajiBuffer.length > 0) {
+        state.romajiBuffer = state.romajiBuffer.slice(0, -1);
+        renderNameInputSlots();
+        return;
+      }
+
+      commitPendingToggle();
+      if (state.typedChars.length > 0) {
+        state.typedChars.pop();
+        sound.playKeyPop();
+        renderNameInputSlots();
+        updatePlayStatusUI();
+      }
+    }
+
+    function triggerFirstCharHint() {
+      const constel = state.currentConstellation;
+      if (!constel || state.isCompletedCelebration) return;
+      state.showFirstCharHint = true;
+      sound.playKeyPop();
+      renderNameInputSlots();
+      showToast(`ヒント：さいしょの 1もじは「${constel.name[0]}」だよ！`, 2200);
+    }
+
+    // スマホ風キーパッド（フリック＆連続タップ）のセットアップ
+    function setupFlickKeypad() {
+      const elFlickPopup = document.getElementById('flick-popup');
+      const elFlickCenter = document.getElementById('flick-center');
+      const elFlickLeft = document.getElementById('flick-left');
+      const elFlickUp = document.getElementById('flick-up');
+      const elFlickRight = document.getElementById('flick-right');
+      const elFlickDown = document.getElementById('flick-down');
+
+      const flickKeys = document.querySelectorAll('.flick-key');
+      const FLICK_THRESHOLD = 24;
+
+      flickKeys.forEach(btn => {
+        const baseKey = btn.dataset.key;
+        const rowChars = FLICK_ROWS[baseKey];
+        if (!rowChars) return;
+
+        let activePointerId = null;
+        let startX = 0;
+        let startY = 0;
+        let currentDir = 0; // 0:中, 1:左, 2:上, 3:右, 4:下
+
+        function updatePopupHighlight(dir) {
+          const items = [elFlickCenter, elFlickLeft, elFlickUp, elFlickRight, elFlickDown];
+          items.forEach((el, idx) => {
+            if (!el) return;
+            if (idx === dir) {
+              el.className = idx === 0
+                ? 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-xl bg-amber-400 text-slate-950 font-extrabold text-xl flex items-center justify-center shadow-lg border-2 border-white scale-110'
+                : 'w-11 h-11 rounded-xl bg-amber-400 text-slate-950 font-extrabold text-lg flex items-center justify-center shadow-lg border-2 border-white scale-110 ' +
+                  (idx === 1 ? 'absolute top-1/2 left-0 -translate-y-1/2' :
+                   idx === 2 ? 'absolute top-0 left-1/2 -translate-x-1/2' :
+                   idx === 3 ? 'absolute top-1/2 right-0 -translate-y-1/2' :
+                               'absolute bottom-0 left-1/2 -translate-x-1/2');
+            } else {
+              el.className = idx === 0
+                ? 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center shadow-lg border border-blue-200'
+                : 'w-10 h-10 rounded-xl bg-slate-800/95 text-blue-100 font-bold text-base flex items-center justify-center shadow border border-blue-300/50 ' +
+                  (idx === 1 ? 'absolute top-1/2 left-0 -translate-y-1/2' :
+                   idx === 2 ? 'absolute top-0 left-1/2 -translate-x-1/2' :
+                   idx === 3 ? 'absolute top-1/2 right-0 -translate-y-1/2' :
+                               'absolute bottom-0 left-1/2 -translate-x-1/2');
+            }
+          });
+        }
+
+        btn.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          sound.init();
+          activePointerId = e.pointerId;
+          btn.setPointerCapture(e.pointerId);
+          btn.classList.add('is-pressed');
+          startX = e.clientX;
+          startY = e.clientY;
+          currentDir = 0;
+
+          const rect = btn.getBoundingClientRect();
+          elFlickPopup.style.left = `${rect.left + rect.width / 2}px`;
+          elFlickPopup.style.top = `${rect.top + rect.height / 2}px`;
+
+          elFlickCenter.textContent = rowChars[0] || '';
+          elFlickLeft.textContent = rowChars[1] || '';
+          elFlickUp.textContent = rowChars[2] || '';
+          elFlickRight.textContent = rowChars[3] || '';
+          elFlickDown.textContent = rowChars[4] || '';
+
+          updatePopupHighlight(0);
+          elFlickPopup.classList.remove('hidden');
+        });
+
+        btn.addEventListener('pointermove', (e) => {
+          if (e.pointerId !== activePointerId) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          const dist = Math.hypot(dx, dy);
+
+          let dir = 0;
+          if (dist >= FLICK_THRESHOLD) {
+            if (Math.abs(dx) > Math.abs(dy)) {
+              dir = dx < 0 ? 1 : 3; // 左 : 右
+            } else {
+              dir = dy < 0 ? 2 : 4; // 上 : 下
+            }
+          }
+          if (dir !== currentDir) {
+            currentDir = dir;
+            updatePopupHighlight(dir);
+          }
+        });
+
+        function endFlick(e) {
+          if (e.pointerId !== activePointerId) return;
+          activePointerId = null;
+          btn.classList.remove('is-pressed');
+          elFlickPopup.classList.add('hidden');
+
+          const now = Date.now();
+          if (currentDir === 0) {
+            // 中央タップ：同じキーを連続タップしたら文字送り（あ→い→う→え→お）
+            const validChars = rowChars.filter(ch => ch && ch !== '「' && ch !== '」' && ch !== '〜');
+            const constel = state.currentConstellation;
+            const isAtLastSlotSameKey =
+              constel &&
+              state.typedChars.length >= constel.name.length &&
+              state.lastToggleKey === baseKey &&
+              now - state.lastToggleTime < 2200;
+
+            if (
+              (state.isPendingToggle && state.lastToggleKey === baseKey && now - state.lastToggleTime < 1400) ||
+              isAtLastSlotSameKey
+            ) {
+              state.isPendingToggle = true;
+              state.lastToggleIndex = (state.lastToggleIndex + 1) % validChars.length;
+              state.lastToggleTime = now;
+              insertHiraganaChar(validChars[state.lastToggleIndex], { fromMultiTap: true });
+            } else {
+              // 別の行のキーをタップしたときは、直前の連続タップ待機文字を必ず確定させる
+              commitPendingToggle();
+              state.lastToggleKey = baseKey;
+              state.lastToggleIndex = 0;
+              state.lastToggleTime = now;
+              insertHiraganaChar(validChars[0], { fromMultiTap: true });
+            }
+          } else {
+            // フリック方向確定
+            commitPendingToggle();
+            const chosenChar = rowChars[currentDir];
+            if (chosenChar && chosenChar !== '「' && chosenChar !== '」' && chosenChar !== '〜') {
+              insertHiraganaChar(chosenChar, { fromMultiTap: false });
+            }
+          }
+        }
+
+        btn.addEventListener('pointerup', endFlick);
+        btn.addEventListener('pointercancel', endFlick);
+      });
+
+      document.getElementById('key-backspace').addEventListener('click', () => {
+        sound.init();
+        deleteLastChar();
+      });
+
+      document.getElementById('key-dakuten').addEventListener('click', () => {
+        sound.init();
+        applyDakutenCycle();
+      });
+
+      document.getElementById('key-chouon').addEventListener('click', () => {
+        sound.init();
+        insertHiraganaChar('ー', { fromMultiTap: false });
+      });
+
+      document.getElementById('key-hint-char').addEventListener('click', () => {
+        sound.init();
+        triggerFirstCharHint();
+      });
+    }
+
+    // 物理キーボード（ローマ字・ひらがな直接入力）対応
+    function handlePhysicalKeyDown(e) {
+      if (state.currentView !== 'play') return;
+      if (!elCompleteModal.classList.contains('hidden')) {
+        if (e.key === 'Enter') {
+          document.getElementById('btn-modal-next').click();
+        }
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        deleteLastChar();
+        return;
+      }
+
+      // ひらがな直接入力（IMEオン時など）
+      if (e.key.length === 1 && /[\u3041-\u3096ー]/.test(e.key)) {
+        e.preventDefault();
+        state.romajiBuffer = '';
+        insertHiraganaChar(e.key, { fromMultiTap: false, fromRomaji: true });
+        return;
+      }
+
+      // ローマ字入力（a-z, -）
+      if (e.key.length === 1 && /^[a-zA-Z\-]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        sound.init();
+        const ch = e.key.toLowerCase();
+
+        // 「n」のあとに母音・y・n以外が来たら「ん」を確定
+        if (state.romajiBuffer === 'n' && !'aiueoyn'.includes(ch)) {
+          insertHiraganaChar('ん', { fromMultiTap: false, fromRomaji: true });
+          state.romajiBuffer = '';
+        }
+
+        // 促音「っ」（同じ子音の連続：kk, tt, ss, ppなど）
+        if (
+          state.romajiBuffer.length === 1 &&
+          state.romajiBuffer === ch &&
+          !'aiueon-'.includes(ch)
+        ) {
+          insertHiraganaChar('っ', { fromMultiTap: false, fromRomaji: true });
+          state.romajiBuffer = ch;
+          renderNameInputSlots();
+          return;
+        }
+
+        state.romajiBuffer += ch;
+
+        // 完全一致するローマ字があるか確認
+        if (ROMAJI_TO_HIRAGANA[state.romajiBuffer]) {
+          const kana = ROMAJI_TO_HIRAGANA[state.romajiBuffer];
+          state.romajiBuffer = '';
+          insertHiraganaChar(kana, { fromMultiTap: false, fromRomaji: true });
+          return;
+        }
+
+        // 前方一致するローマ字候補があるか確認
+        const hasPrefix = ROMAJI_KEYS.some(k => k.startsWith(state.romajiBuffer));
+        if (!hasPrefix) {
+          // 無効な組み合わせなら最後の1文字だけ残す
+          state.romajiBuffer = ROMAJI_KEYS.some(k => k.startsWith(ch)) ? ch : '';
+          if (ROMAJI_TO_HIRAGANA[state.romajiBuffer]) {
+            const kana = ROMAJI_TO_HIRAGANA[state.romajiBuffer];
+            state.romajiBuffer = '';
+            insertHiraganaChar(kana, { fromMultiTap: false, fromRomaji: true });
+            return;
+          }
+        }
+
+        renderNameInputSlots();
+      }
+    }
+
+    /**
+     * 12. 夜空キャンバス描画＆スワイプ線結びエンジン
+     */
+    function updateSurroundButtonUI() {
+      if (!elBtnToggleSurround) return;
+      if (state.showSurroundings) {
+        elBtnToggleSurround.textContent = '🔍 アップに もどす';
+        elBtnToggleSurround.className = 'px-2.5 sm:px-3 py-2 rounded-2xl bg-cyan-500 text-slate-950 hover:bg-cyan-400 active:scale-95 transition text-xs font-extrabold border border-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.5)]';
+        if (elSurroundModeBanner) elSurroundModeBanner.classList.remove('hidden');
+      } else {
+        elBtnToggleSurround.textContent = '🔭 まわりの星座';
+        elBtnToggleSurround.className = 'px-2.5 sm:px-3 py-2 rounded-2xl glass-panel hover:bg-cyan-900/70 active:scale-95 transition text-xs font-bold text-cyan-200 border border-cyan-400/35 shadow-lg';
+        if (elSurroundModeBanner) elSurroundModeBanner.classList.add('hidden');
+      }
+    }
+
+    // 実際の天球座標（ra, dec）から周辺星座の相対配置を計算（ルーズ視点用）
+    function getSurroundingConstellations(centerConstel) {
+      if (!centerConstel || typeof centerConstel.ra !== 'number') return [];
+
+      // 大三角（アステリズム）は独立した別の星座として重複表示しない
+      // （構成星座の1等星同士を「夏の大三角」「冬の大三角」として結んで表示する）
+      const excludeIds = new Set([centerConstel.id, 'summer_triangle', 'winter_triangle']);
+
+      // 大三角モード自体を開いているときは、3つの頂点に構成星座がピタッと重なるよう調整
+      const pinnedOffsets = {};
+      if (centerConstel.id === 'summer_triangle') {
+        const sLyra = CONSTELLATIONS.find(c => c.id === 'lyra');
+        if (sLyra) {
+          pinnedOffsets['lyra'] = {
+            ox: (0.74 - 0.5) - (sLyra.stars[0].x - 0.5) * 0.72,
+            oy: (0.26 - 0.5) - (sLyra.stars[0].y - 0.5) * 0.72,
+            scale: 0.72
+          };
+        }
+        const sCygnus = CONSTELLATIONS.find(c => c.id === 'cygnus');
+        if (sCygnus) {
+          pinnedOffsets['cygnus'] = {
+            ox: (0.24 - 0.5) - (sCygnus.stars[0].x - 0.5) * 0.72,
+            oy: (0.22 - 0.5) - (sCygnus.stars[0].y - 0.5) * 0.72,
+            scale: 0.72
+          };
+        }
+        const sAquila = CONSTELLATIONS.find(c => c.id === 'aquila');
+        if (sAquila) {
+          pinnedOffsets['aquila'] = {
+            ox: (0.48 - 0.5) - (sAquila.stars[0].x - 0.5) * 0.72,
+            oy: (0.80 - 0.5) - (sAquila.stars[0].y - 0.5) * 0.72,
+            scale: 0.72
+          };
+        }
+      } else if (centerConstel.id === 'winter_triangle') {
+        const sOrion = CONSTELLATIONS.find(c => c.id === 'orion');
+        if (sOrion) {
+          pinnedOffsets['orion'] = {
+            ox: (0.64 - 0.5) - (sOrion.stars[0].x - 0.5) * 0.72,
+            oy: (0.34 - 0.5) - (sOrion.stars[0].y - 0.5) * 0.72,
+            scale: 0.72
+          };
+        }
+        const sCanisMinor = CONSTELLATIONS.find(c => c.id === 'canis_minor');
+        if (sCanisMinor) {
+          pinnedOffsets['canis_minor'] = {
+            ox: (0.24 - 0.5) - (sCanisMinor.stars[0].x - 0.5) * 0.72,
+            oy: (0.30 - 0.5) - (sCanisMinor.stars[0].y - 0.5) * 0.72,
+            scale: 0.72
+          };
+        }
+        const sCanisMajor = CONSTELLATIONS.find(c => c.id === 'canis_major');
+        if (sCanisMajor) {
+          pinnedOffsets['canis_major'] = {
+            ox: (0.36 - 0.5) - (sCanisMajor.stars[0].x - 0.5) * 0.72,
+            oy: (0.72 - 0.5) - (sCanisMajor.stars[0].y - 0.5) * 0.72,
+            scale: 0.72
+          };
+        }
+      }
+
+      const degToUnit = 0.036;
+      const items = [];
+
+      CONSTELLATIONS.forEach(c => {
+        if (excludeIds.has(c.id) || typeof c.ra !== 'number') return;
+
+        if (pinnedOffsets[c.id]) {
+          items.push({
+            constel: c,
+            offsetX: pinnedOffsets[c.id].ox,
+            offsetY: pinnedOffsets[c.id].oy,
+            scale: pinnedOffsets[c.id].scale
+          });
+          return;
+        }
+
+        let degX = 0;
+        let degY = 0;
+
+        if (centerConstel.dec >= 52 && c.dec >= 15) {
+          // 北極星まわりの北天投影（北斗七星とカシオペヤ座の反対位置関係を再現）
+          const r0 = 90 - centerConstel.dec;
+          const ri = 90 - c.dec;
+          const dTheta = ((c.ra - centerConstel.ra) * 15 * Math.PI) / 180;
+          degX = -ri * Math.sin(dTheta);
+          degY = ri * Math.cos(dTheta) - r0;
+        } else {
+          const dra = ((c.ra - centerConstel.ra + 36) % 24) - 12;
+          const avgDecRad = (((centerConstel.dec + c.dec) * 0.5) * Math.PI) / 180;
+          degX = -dra * 15 * Math.cos(Math.max(-1.05, Math.min(1.05, avgDecRad)));
+          degY = -(c.dec - centerConstel.dec);
+        }
+
+        let ox = degX * degToUnit;
+        let oy = degY * degToUnit;
+        const dist = Math.hypot(ox, oy);
+
+        // 視野内に収まる範囲（おおよそ65度以内）の周辺星座を採用
+        if (dist > 2.35) return;
+
+        // 主役星座の中心と重なりすぎる場合のみ最小距離を確保
+        if (dist < 0.78 && dist > 0.001) {
+          ox = (ox / dist) * 0.78;
+          oy = (oy / dist) * 0.78;
+        }
+
+        items.push({
+          constel: c,
+          offsetX: ox,
+          offsetY: oy,
+          scale: 0.64
+        });
+      });
+
+      // 中心同士がほぼ同じ点に重なった場合のみ最小限ずらす（本来の天球位置関係を保つ）
+      for (let iter = 0; iter < 2; iter++) {
+        for (let i = 0; i < items.length; i++) {
+          for (let j = i + 1; j < items.length; j++) {
+            if (pinnedOffsets[items[i].constel.id] || pinnedOffsets[items[j].constel.id]) continue;
+            const dx = items[j].offsetX - items[i].offsetX;
+            const dy = items[j].offsetY - items[i].offsetY;
+            const d = Math.hypot(dx, dy);
+            if (d < 0.36 && d > 0.001) {
+              const push = (0.36 - d) * 0.5;
+              items[i].offsetX -= (dx / d) * push;
+              items[i].offsetY -= (dy / d) * push;
+              items[j].offsetX += (dx / d) * push;
+              items[j].offsetY += (dy / d) * push;
+            }
+          }
+        }
+      }
+
+      return items;
+    }
+
+    // ルーズ視点時に、表示中の構成星座の1等星を結ぶ「夏の大三角」「冬の大三角」の座標を取得
+    function getVisibleAsterismTriangles(centerConstel, surroundItems) {
+      if (!centerConstel) return [];
+
+      function getStarNormalizedPos(constelId, starIdx) {
+        if (centerConstel.id === constelId) {
+          const s = centerConstel.stars[starIdx];
+          return s ? { nx: s.x, ny: s.y } : null;
+        }
+        const found = surroundItems.find(it => it.constel.id === constelId);
+        if (found) {
+          const s = found.constel.stars[starIdx];
+          if (!s) return null;
+          return {
+            nx: 0.5 + found.offsetX + (s.x - 0.5) * found.scale,
+            ny: 0.5 + found.offsetY + (s.y - 0.5) * found.scale
+          };
+        }
+        return null;
+      }
+
+      const triangles = [];
+
+      // 夏の大三角（こと座のベガ・はくちょう座のデネブ・わし座のアルタイル）
+      if (centerConstel.id !== 'summer_triangle') {
+        const vega = getStarNormalizedPos('lyra', 0);
+        const deneb = getStarNormalizedPos('cygnus', 0);
+        const altair = getStarNormalizedPos('aquila', 0);
+        if (vega && deneb && altair) {
+          triangles.push({
+            label: '夏の大三角',
+            points: [vega, deneb, altair]
+          });
+        }
+      }
+
+      // 冬の大三角（オリオン座のベテルギウス・おおいぬ座のシリウス・こいぬ座のプロキオン）
+      if (centerConstel.id !== 'winter_triangle') {
+        const betelgeuse = getStarNormalizedPos('orion', 0);
+        const sirius = getStarNormalizedPos('canis_major', 0);
+        const procyon = getStarNormalizedPos('canis_minor', 0);
+        if (betelgeuse && sirius && procyon) {
+          triangles.push({
+            label: '冬の大三角',
+            points: [betelgeuse, sirius, procyon]
+          });
+        }
+      }
+
+      return triangles;
+    }
+
+    function getSkySquareBounds() {
+      const rect = elSkyStage.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      // 上部バー・左下マージンを考慮しつつ、1:1正方形の実際の比率で最大サイズを確保
+      const topOffset = 44;
+      const availH = Math.max(180, h - topOffset - 24);
+      const availW = Math.max(180, w - 32);
+      const size = Math.min(availW, availH);
+      const left = (w - size) / 2;
+      const top = topOffset + (availH - size) / 2;
+      return { left, top, size, width: w, height: h };
+    }
+
+    function normalizedToCanvasPos(nx, ny) {
+      const b = getSkySquareBounds();
+      const z = state.currentZoom || 1.0;
+      const cx = b.left + 0.5 * b.size;
+      const cy = b.top + 0.5 * b.size;
+      return {
+        x: cx + (nx - 0.5) * b.size * z,
+        y: cy + (ny - 0.5) * b.size * z
+      };
+    }
+
+    function resizePlayCanvases() {
+      if (state.currentView !== 'play') return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = elSkyStage.getBoundingClientRect();
+      elStarCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      elStarCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+
+      const guideSize = window.innerWidth < 640 ? 96 : 124;
+      elGuideCanvas.style.width = `${guideSize}px`;
+      elGuideCanvas.style.height = `${guideSize}px`;
+      elGuideCanvas.width = Math.floor(guideSize * dpr);
+      elGuideCanvas.height = Math.floor(guideSize * dpr);
+      drawGuideCanvas();
+    }
+
+    function drawGuideCanvas() {
+      const constel = state.currentConstellation;
+      if (!constel) return;
+      const dpr = window.devicePixelRatio || 1;
+      const size = elGuideCanvas.width / dpr;
+
+      guideCtx.save();
+      guideCtx.scale(dpr, dpr);
+      guideCtx.clearRect(0, 0, size, size);
+
+      const pad = 16;
+      const inner = size - pad * 2;
+
+      // お手本の線
+      guideCtx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+      guideCtx.lineWidth = 2;
+      guideCtx.lineCap = 'round';
+      constel.lines.forEach(([a, b]) => {
+        const sa = constel.stars[a];
+        const sb = constel.stars[b];
+        if (!sa || !sb) return;
+        guideCtx.beginPath();
+        guideCtx.moveTo(pad + sa.x * inner, pad + sa.y * inner);
+        guideCtx.lineTo(pad + sb.x * inner, pad + sb.y * inner);
+        guideCtx.stroke();
+      });
+
+      // お手本の星
+      constel.stars.forEach(s => {
+        const sx = pad + s.x * inner;
+        const sy = pad + s.y * inner;
+        const r = s.mag === 1 ? 3.8 : s.mag === 2 ? 2.8 : 2.1;
+        guideCtx.beginPath();
+        guideCtx.arc(sx, sy, r, 0, Math.PI * 2);
+        guideCtx.fillStyle = s.color || '#fef08a';
+        guideCtx.fill();
+      });
+
+      guideCtx.restore();
+    }
+
+    function lineKey(a, b) {
+      return a < b ? `${a}-${b}` : `${b}-${a}`;
+    }
+
+    function hasValidLineBetween(a, b) {
+      const constel = state.currentConstellation;
+      if (!constel || a === b) return false;
+      return constel.lines.some(([u, v]) => (u === a && v === b) || (u === b && v === a));
+    }
+
+    function spawnParticles(x, y, count = 14, color = '#7dd3fc') {
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+        const speed = 1.2 + Math.random() * 3.2;
+        state.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1.0,
+          decay: 0.02 + Math.random() * 0.02,
+          size: 2 + Math.random() * 2.5,
+          color
+        });
+      }
+    }
+
+    function tryConnectStars(idxA, idxB) {
+      const constel = state.currentConstellation;
+      if (!constel || idxA < 0 || idxB < 0 || idxA === idxB) return false;
+
+      if (hasValidLineBetween(idxA, idxB)) {
+        const key = lineKey(idxA, idxB);
+        if (!state.connectedLines.has(key)) {
+          state.connectedLines.add(key);
+          if (state.connectedLines.size < constel.lines.length) {
+            sound.playStarConnect(state.connectedLines.size - 1);
+          }
+
+          const posB = normalizedToCanvasPos(constel.stars[idxB].x, constel.stars[idxB].y);
+          spawnParticles(posB.x, posB.y, 16, '#38bdf8');
+          updatePlayStatusUI();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function findNearestTargetStar(px, py, hitRadius = 34) {
+      const constel = state.currentConstellation;
+      if (!constel) return -1;
+      let bestIdx = -1;
+      let bestDist = hitRadius;
+      constel.stars.forEach((s, idx) => {
+        const pos = normalizedToCanvasPos(s.x, s.y);
+        const d = Math.hypot(px - pos.x, py - pos.y);
+        if (d < bestDist) {
+          bestDist = d;
+          bestIdx = idx;
+        }
+      });
+      return bestIdx;
+    }
+
+    // 夜空キャンバスのポインター操作（スワイプ＆タップ両対応）
+    function setupSkyCanvasInteraction() {
+      function getCanvasPoint(e) {
+        const rect = elStarCanvas.getBoundingClientRect();
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+
+      elStarCanvas.addEventListener('pointerdown', (e) => {
+        if (state.currentView !== 'play') return;
+        e.preventDefault();
+        sound.init();
+        elStarCanvas.setPointerCapture(e.pointerId);
+
+        const pt = getCanvasPoint(e);
+        const hitIdx = findNearestTargetStar(pt.x, pt.y, 38);
+
+        if (hitIdx !== -1) {
+          // タップ選択していた別の星と有効な線なら即接続
+          if (state.selectedStarIdx !== -1 && state.selectedStarIdx !== hitIdx) {
+            tryConnectStars(state.selectedStarIdx, hitIdx);
+          }
+          state.selectedStarIdx = hitIdx;
+          state.isDraggingStar = true;
+          state.dragStartStarIdx = hitIdx;
+          state.dragPointerPos = pt;
+        } else {
+          state.selectedStarIdx = -1;
+          // ルーズ視点モード中は周辺の星座をタップして移動できる
+          if (state.showSurroundings && Array.isArray(state.surroundHitTargets)) {
+            const hitNeighbor = state.surroundHitTargets.find(
+              item => Math.hypot(pt.x - item.x, pt.y - item.y) <= item.radius
+            );
+            if (hitNeighbor) {
+              sound.playKeyPop();
+              openConstellationPlay(hitNeighbor.constel.id);
+            }
+          }
+        }
+      });
+
+      elStarCanvas.addEventListener('pointermove', (e) => {
+        if (state.currentView !== 'play') return;
+        const pt = getCanvasPoint(e);
+        state.hoveredStarIdx = findNearestTargetStar(pt.x, pt.y, 34);
+        if (state.isDraggingStar) {
+          state.dragPointerPos = pt;
+          // 指やカーソルでなぞりながら次の星を通過したときも連続で線をつなぐ
+          const passIdx = findNearestTargetStar(pt.x, pt.y, 26);
+          if (passIdx !== -1 && passIdx !== state.dragStartStarIdx) {
+            if (tryConnectStars(state.dragStartStarIdx, passIdx)) {
+              state.dragStartStarIdx = passIdx;
+              state.selectedStarIdx = passIdx;
+            }
+          }
+        }
+      });
+
+      function endSkyDrag(e) {
+        if (!state.isDraggingStar) return;
+        const pt = getCanvasPoint(e);
+        const endIdx = findNearestTargetStar(pt.x, pt.y, 38);
+
+        if (endIdx !== -1 && endIdx !== state.dragStartStarIdx) {
+          const connected = tryConnectStars(state.dragStartStarIdx, endIdx);
+          if (!connected && !hasValidLineBetween(state.dragStartStarIdx, endIdx)) {
+            sound.playStarError();
+            state.errorFlashLine = {
+              a: state.dragStartStarIdx,
+              b: endIdx,
+              life: 1.0
+            };
+          }
+          state.selectedStarIdx = endIdx;
+        }
+
+        state.isDraggingStar = false;
+        state.dragStartStarIdx = -1;
+      }
+
+      elStarCanvas.addEventListener('pointerup', endSkyDrag);
+      elStarCanvas.addEventListener('pointercancel', endSkyDrag);
+    }
+
+    // 等級（1等星〜4等星）に応じた星の輝きと大きさの描画
+    function drawStarWithMagnitude(ctx, x, y, mag, color, scale = 1.0, time = 0, isSelected = false, isHovered = false) {
+      const baseRadii = { 1: 6.4, 2: 4.8, 3: 3.6, 4: 2.6 };
+      const r = (baseRadii[mag] || 3.2) * scale;
+      const starColor = color || '#fef9c3';
+      const twinkle = 0.92 + 0.08 * Math.sin(time * 0.004 + x * 0.05 + y * 0.05);
+
+      ctx.save();
+
+      // 選択中・ホバー中のリング表示
+      if (isSelected || isHovered) {
+        ctx.beginPath();
+        ctx.arc(x, y, r + (isSelected ? 11 : 8), 0, Math.PI * 2);
+        ctx.strokeStyle = isSelected ? 'rgba(250, 204, 21, 0.85)' : 'rgba(125, 211, 252, 0.65)';
+        ctx.lineWidth = isSelected ? 2.2 : 1.6;
+        ctx.stroke();
+      }
+
+      // 外側の光のハロー
+      const haloRadius = r * (mag === 1 ? 3.8 : mag === 2 ? 3.0 : 2.3) * twinkle;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, haloRadius);
+      grad.addColorStop(0, starColor);
+      grad.addColorStop(0.35, 'rgba(255, 255, 255, 0.42)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, haloRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 1等星・2等星の十字の光芒
+      if (mag <= 2 && scale >= 0.5) {
+        const spikeLen = r * (mag === 1 ? 3.4 : 2.3) * twinkle;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = mag === 1 ? 1.4 : 1.0;
+        ctx.beginPath();
+        ctx.moveTo(x - spikeLen, y);
+        ctx.lineTo(x + spikeLen, y);
+        ctx.moveTo(x, y - spikeLen);
+        ctx.lineTo(x, y + spikeLen);
+        ctx.stroke();
+      }
+
+      // 星の中心コア
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // 夜空メインキャンバスの毎フレーム描画
+    function drawSkyScene(time) {
+      if (state.currentView !== 'play' || !state.currentConstellation) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = elStarCanvas.width / dpr;
+      const h = elStarCanvas.height / dpr;
+      if (w <= 0 || h <= 0) return;
+
+      // ルーズ視点（まわりの星座）と通常視点のズーム補間
+      const targetZoom = state.showSurroundings ? 0.34 : 1.0;
+      state.currentZoom += (targetZoom - state.currentZoom) * 0.12;
+      if (Math.abs(targetZoom - state.currentZoom) < 0.002) {
+        state.currentZoom = targetZoom;
+      }
+
+      const constel = state.currentConstellation;
+      const z = state.currentZoom;
+
+      starCtx.save();
+      starCtx.scale(dpr, dpr);
+      starCtx.clearRect(0, 0, w, h);
+
+      // 背景のきらめく小さな星々
+      BG_STARS.forEach(bg => {
+        const alpha = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(time * 0.0022 + bg.phase));
+        starCtx.beginPath();
+        starCtx.arc(bg.x * w, bg.y * h, bg.r, 0, Math.PI * 2);
+        starCtx.fillStyle = `rgba(219, 234, 254, ${alpha.toFixed(3)})`;
+        starCtx.fill();
+      });
+
+      // ルーズ視点時：まわりの星座と1等星を実際の天球配置で表示
+      state.surroundHitTargets = [];
+      if (z < 0.88 && Array.isArray(state.surroundItemsCache)) {
+        const surroundAlpha = Math.min(1, (0.88 - z) / 0.45);
+        starCtx.save();
+        starCtx.globalAlpha = surroundAlpha * 0.85;
+
+        state.surroundItemsCache.forEach(item => {
+          const neighbor = item.constel;
+          const ncx = 0.5 + item.offsetX;
+          const ncy = 0.5 + item.offsetY;
+          const centerPos = normalizedToCanvasPos(ncx, ncy);
+
+          // 画面外の周辺星座はスキップ
+          if (centerPos.x < -120 || centerPos.x > w + 120 || centerPos.y < -120 || centerPos.y > h + 120) {
+            return;
+          }
+
+          // 周辺星座の線
+          starCtx.strokeStyle = 'rgba(125, 211, 252, 0.36)';
+          starCtx.lineWidth = 1.3;
+          starCtx.lineCap = 'round';
+          neighbor.lines.forEach(([a, b]) => {
+            const sa = neighbor.stars[a];
+            const sb = neighbor.stars[b];
+            if (!sa || !sb) return;
+            const pa = normalizedToCanvasPos(ncx + (sa.x - 0.5) * item.scale, ncy + (sa.y - 0.5) * item.scale);
+            const pb = normalizedToCanvasPos(ncx + (sb.x - 0.5) * item.scale, ncy + (sb.y - 0.5) * item.scale);
+            starCtx.beginPath();
+            starCtx.moveTo(pa.x, pa.y);
+            starCtx.lineTo(pb.x, pb.y);
+            starCtx.stroke();
+          });
+
+          // 周辺星座の星
+          neighbor.stars.forEach(s => {
+            const ps = normalizedToCanvasPos(ncx + (s.x - 0.5) * item.scale, ncy + (s.y - 0.5) * item.scale);
+            drawStarWithMagnitude(starCtx, ps.x, ps.y, s.mag, s.color, 0.55, time, false, false);
+          });
+
+          // 周辺星座の名前ラベル
+          starCtx.font = 'bold 12px "M PLUS Rounded 1c", sans-serif';
+          starCtx.textAlign = 'center';
+          starCtx.fillStyle = 'rgba(186, 230, 253, 0.9)';
+          starCtx.fillText(neighbor.kanji, centerPos.x, centerPos.y + 38 * z + 14);
+
+          state.surroundHitTargets.push({
+            constel: neighbor,
+            x: centerPos.x,
+            y: centerPos.y,
+            radius: Math.max(34, 52 * z)
+          });
+        });
+
+        // 構成星座の1等星どうしを結ぶ「夏の大三角」「冬の大三角」の破線ガイド
+        const asterisms = getVisibleAsterismTriangles(constel, state.surroundItemsCache);
+        asterisms.forEach(ast => {
+          const pts = ast.points.map(p => normalizedToCanvasPos(p.nx, p.ny));
+          starCtx.save();
+          starCtx.setLineDash([6, 6]);
+          starCtx.strokeStyle = 'rgba(253, 224, 71, 0.48)';
+          starCtx.lineWidth = 1.6;
+          starCtx.beginPath();
+          starCtx.moveTo(pts[0].x, pts[0].y);
+          starCtx.lineTo(pts[1].x, pts[1].y);
+          starCtx.lineTo(pts[2].x, pts[2].y);
+          starCtx.closePath();
+          starCtx.stroke();
+          starCtx.restore();
+
+          const cx = (pts[0].x + pts[1].x + pts[2].x) / 3;
+          const cy = (pts[0].y + pts[1].y + pts[2].y) / 3;
+          starCtx.font = 'bold 12px "M PLUS Rounded 1c", sans-serif';
+          starCtx.textAlign = 'center';
+          starCtx.fillStyle = 'rgba(253, 224, 71, 0.85)';
+          starCtx.fillText(`△ ${ast.label}`, cx, cy);
+        });
+
+        starCtx.restore();
+      }
+
+      // 大三角モードの背景構成星（ズームアウト時は周辺星座表示へ滑らかに切り替え）
+      if (Array.isArray(constel.extraStars) && z > 0.45) {
+        const extraAlpha = Math.min(1, (z - 0.45) / 0.4);
+        starCtx.save();
+        starCtx.globalAlpha = extraAlpha * 0.85;
+        constel.extraStars.forEach(es => {
+          const ep = normalizedToCanvasPos(es.x, es.y);
+          drawStarWithMagnitude(starCtx, ep.x, ep.y, es.mag, es.color, 0.72 * Math.max(0.65, z), time, false, false);
+        });
+        starCtx.restore();
+      }
+
+      const isAllLinesDone = state.connectedLines.size >= constel.lines.length;
+
+      // 正しく結ばれた星座の線を描画
+      starCtx.save();
+      starCtx.lineCap = 'round';
+      constel.lines.forEach(([a, b]) => {
+        const key = lineKey(a, b);
+        if (!state.connectedLines.has(key)) return;
+        const sa = constel.stars[a];
+        const sb = constel.stars[b];
+        if (!sa || !sb) return;
+        const pa = normalizedToCanvasPos(sa.x, sa.y);
+        const pb = normalizedToCanvasPos(sb.x, sb.y);
+
+        // 外側の光彩
+        starCtx.strokeStyle = isAllLinesDone ? 'rgba(250, 204, 21, 0.35)' : 'rgba(56, 189, 248, 0.35)';
+        starCtx.lineWidth = isAllLinesDone ? 7 : 6;
+        starCtx.beginPath();
+        starCtx.moveTo(pa.x, pa.y);
+        starCtx.lineTo(pb.x, pb.y);
+        starCtx.stroke();
+
+        // 芯のライン
+        starCtx.strokeStyle = isAllLinesDone ? '#fde047' : '#7dd3fc';
+        starCtx.lineWidth = isAllLinesDone ? 2.8 : 2.4;
+        starCtx.beginPath();
+        starCtx.moveTo(pa.x, pa.y);
+        starCtx.lineTo(pb.x, pb.y);
+        starCtx.stroke();
+      });
+      starCtx.restore();
+
+      // ドラッグ中のガイドライン描画
+      if (state.isDraggingStar && state.dragStartStarIdx !== -1 && constel.stars[state.dragStartStarIdx]) {
+        const startStar = constel.stars[state.dragStartStarIdx];
+        const pStart = normalizedToCanvasPos(startStar.x, startStar.y);
+        starCtx.save();
+        starCtx.strokeStyle = 'rgba(250, 204, 21, 0.85)';
+        starCtx.lineWidth = 2.4;
+        starCtx.setLineDash([6, 5]);
+        starCtx.beginPath();
+        starCtx.moveTo(pStart.x, pStart.y);
+        starCtx.lineTo(state.dragPointerPos.x, state.dragPointerPos.y);
+        starCtx.stroke();
+        starCtx.restore();
+      }
+
+      // 誤接続時の赤いフラッシュライン
+      if (state.errorFlashLine) {
+        const { a, b, life } = state.errorFlashLine;
+        const sa = constel.stars[a];
+        const sb = constel.stars[b];
+        if (sa && sb && life > 0) {
+          const pa = normalizedToCanvasPos(sa.x, sa.y);
+          const pb = normalizedToCanvasPos(sb.x, sb.y);
+          starCtx.save();
+          starCtx.strokeStyle = `rgba(248, 113, 113, ${life.toFixed(3)})`;
+          starCtx.lineWidth = 3;
+          starCtx.beginPath();
+          starCtx.moveTo(pa.x, pa.y);
+          starCtx.lineTo(pb.x, pb.y);
+          starCtx.stroke();
+          starCtx.restore();
+          state.errorFlashLine.life -= 0.045;
+          if (state.errorFlashLine.life <= 0) {
+            state.errorFlashLine = null;
+          }
+        } else {
+          state.errorFlashLine = null;
+        }
+      }
+
+      // 主役星座の星々を描画
+      const starScale = Math.max(0.68, z);
+      constel.stars.forEach((s, idx) => {
+        const pos = normalizedToCanvasPos(s.x, s.y);
+        const isSelected = state.selectedStarIdx === idx || state.dragStartStarIdx === idx;
+        const isHovered = state.hoveredStarIdx === idx;
+        drawStarWithMagnitude(starCtx, pos.x, pos.y, s.mag, s.color, starScale, time, isSelected, isHovered);
+      });
+
+      // 星をすべてつなぎ終わったあと、またはルーズ視点時に代表的な星の名前を表示
+      if ((isAllLinesDone || state.showSurroundings) && Array.isArray(constel.starLabels)) {
+        starCtx.save();
+        starCtx.font = 'bold 13px "M PLUS Rounded 1c", sans-serif';
+        constel.starLabels.forEach(lbl => {
+          const s = constel.stars[lbl.starIdx];
+          if (!s) return;
+          const pos = normalizedToCanvasPos(s.x, s.y);
+          const tx = pos.x + (lbl.dx || 0) * Math.max(0.75, z);
+          const ty = pos.y + (lbl.dy || 0) * Math.max(0.75, z);
+          starCtx.textAlign = lbl.align || 'left';
+          starCtx.strokeStyle = 'rgba(4, 8, 20, 0.85)';
+          starCtx.lineWidth = 3.5;
+          starCtx.strokeText(lbl.text, tx, ty);
+          starCtx.fillStyle = '#fef08a';
+          starCtx.fillText(lbl.text, tx, ty);
+        });
+        starCtx.restore();
+      }
+
+      // キラキラパーティクル更新＆描画
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        p.life -= p.decay;
+
+        if (p.life <= 0) {
+          state.particles.splice(i, 1);
+          continue;
+        }
+
+        starCtx.save();
+        starCtx.globalAlpha = Math.max(0, p.life);
+        starCtx.fillStyle = p.color;
+        starCtx.beginPath();
+        starCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        starCtx.fill();
+        starCtx.restore();
+      }
+
+      starCtx.restore();
+    }
+
+    function renderLoop(time) {
+      drawSkyScene(time);
+      requestAnimationFrame(renderLoop);
+    }
+
+    /**
+     * 13. UIボタンイベント登録＆初期化
+     */
+    function bindUIEvents() {
+      // フィルタータブ切り替え
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          sound.init();
+          sound.playKeyPop();
+          state.filter = btn.dataset.filter || 'all';
+
+          filterBtns.forEach(b => {
+            if (b === btn) {
+              b.className = 'filter-btn active px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-blue-500 text-white shadow transition shrink-0';
+            } else {
+              b.className = 'filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-blue-100 hover:bg-slate-700 transition shrink-0';
+            }
+          });
+
+          renderZukanGrid();
+        });
+      });
+
+      // ずかんへ戻る
+      document.getElementById('btn-back-zukan').addEventListener('click', () => {
+        sound.init();
+        sound.playKeyPop();
+        switchToZukanView();
+      });
+
+      // まわりの星座（ルーズ視点）切り替え
+      elBtnToggleSurround.addEventListener('click', () => {
+        sound.init();
+        sound.playKeyPop();
+        state.showSurroundings = !state.showSurroundings;
+        updateSurroundButtonUI();
+        if (state.showSurroundings) {
+          showToast('まわりの せいざを ルーズ視点で ひょうじしたよ！', 2200);
+        }
+      });
+
+      // やりなおすボタン
+      document.getElementById('btn-reset-constellation').addEventListener('click', () => {
+        if (!state.currentConstellation) return;
+        sound.init();
+        sound.playKeyPop();
+        openConstellationPlay(state.currentConstellation.id);
+        showToast('さいしょから やりなおすよ！', 1600);
+      });
+
+      // おと ON/OFF ボタン
+      const elBtnToggleSound = document.getElementById('btn-toggle-sound');
+      elBtnToggleSound.addEventListener('click', () => {
+        sound.enabled = !sound.enabled;
+        if (sound.enabled) {
+          sound.init();
+          sound.playKeyPop();
+          elBtnToggleSound.textContent = '🔊 おと';
+        } else {
+          elBtnToggleSound.textContent = '🔇 ミュート';
+        }
+      });
+
+      // ひらがな入力パネル開閉ボタン
+      elBtnToggleKeypad.addEventListener('click', () => {
+        sound.init();
+        sound.playKeyPop();
+        state.keypadVisible = !state.keypadVisible;
+        if (state.keypadVisible) {
+          elMobileKeypadWrapper.classList.remove('hidden');
+          elBtnToggleKeypad.textContent = '⌨ パネル かくす';
+        } else {
+          elMobileKeypadWrapper.classList.add('hidden');
+          elBtnToggleKeypad.textContent = '⌨ パネル ひらく';
+        }
+      });
+
+      // 入力欄タップでパネルを開く
+      elNameInputContainer.addEventListener('click', () => {
+        sound.init();
+        if (!state.keypadVisible) {
+          state.keypadVisible = true;
+          elMobileKeypadWrapper.classList.remove('hidden');
+          elBtnToggleKeypad.textContent = '⌨ パネル かくす';
+        }
+      });
+
+      // 完成モーダル：ほしぞらをみる
+      document.getElementById('btn-modal-view-sky').addEventListener('click', () => {
+        sound.init();
+        sound.playKeyPop();
+        elCompleteModal.classList.add('hidden');
+      });
+
+      // 完成モーダル：ずかんへもどる
+      document.getElementById('btn-modal-zukan').addEventListener('click', () => {
+        sound.init();
+        sound.playKeyPop();
+        switchToZukanView();
+      });
+
+      // 完成モーダル：つぎのせいざへ
+      document.getElementById('btn-modal-next').addEventListener('click', () => {
+        sound.init();
+        sound.playKeyPop();
+        const list = getFilteredConstellations(state.filter);
+        if (list.length === 0) {
+          switchToZukanView();
+          return;
+        }
+        const curIdx = list.findIndex(c => c.id === state.currentConstellation?.id);
+        const nextIdx = curIdx >= 0 ? (curIdx + 1) % list.length : 0;
+        openConstellationPlay(list[nextIdx].id);
+      });
+
+      window.addEventListener('resize', () => {
+        if (state.currentView === 'play') {
+          resizePlayCanvases();
+        }
+      });
+
+      window.addEventListener('keydown', handlePhysicalKeyDown);
+    }
+
+    function initApp() {
+      setupFlickKeypad();
+      setupSkyCanvasInteraction();
+      bindUIEvents();
+      renderZukanGrid();
+      requestAnimationFrame(renderLoop);
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
