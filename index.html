@@ -3,10 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>星座図鑑</title>
-  <meta property="og:title" content="星座図鑑">
-    <meta property="og:description" content="【４年理科星】星座名や星座の並びを学習するアプリです。">
-    <meta property="og:type" content="website">
+  <title>星座図鑑（せいざずかん）</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 小学生にも読みやすい丸ゴシックフォント -->
@@ -160,10 +157,10 @@
 
     <!-- 季節・分類フィルタータブ -->
     <nav class="w-full px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto shrink-0 bg-slate-950/40 border-b border-blue-400/15">
-      <button data-filter="all" id="filter-btn-all" class="filter-btn active px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-blue-500 text-white shadow transition shrink-0">
+      <button data-filter="all" id="filter-btn-all" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-blue-100 hover:bg-slate-700 transition shrink-0">
         すべて (32)
       </button>
-      <button data-filter="rika" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-amber-300 hover:bg-slate-700 transition shrink-0">
+      <button data-filter="rika" class="filter-btn active px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-blue-500 text-white shadow transition shrink-0">
         教科書
       </button>
       <button data-filter="spring" class="filter-btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800/80 text-pink-200 hover:bg-slate-700 transition shrink-0">
@@ -1733,7 +1730,7 @@
 
     const state = {
       currentView: 'zukan',
-      filter: 'all',
+      filter: 'rika',
       completedIds: loadCompletedIds(),
       currentConstellation: null,
       connectedLines: new Set(),
