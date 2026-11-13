@@ -3,10 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>星座図鑑</title>
-  <meta property="og:title" content="星座図鑑">
-    <meta property="og:description" content="【４年理科星】星座名や星座の並びを学習するアプリです。">
-    <meta property="og:type" content="website">
+  <title>星座図鑑（せいざずかん）</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 小学生にも読みやすい丸ゴシックフォント -->
@@ -697,7 +694,7 @@
         kanji: 'おおいぬ座',
         season: 'winter',
         seasonLabel: 'ふゆ',
-        isRika: true,
+        isRika: false,
         ra: 6.75,
         dec: -20.0,
         myth: '<ruby>狩人<rt>かりうど</rt></ruby>オリオンが<ruby>連<rt>つ</rt></ruby>れていた<ruby>猟犬<rt>りょうけん</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。1<ruby>等星<rt>とうせい</rt></ruby>「シリウス」は<ruby>全天<rt>ぜんてん</rt></ruby>でいちばん<ruby>明<rt>あか</rt></ruby>るい<ruby>恒星<rt>こうせい</rt></ruby>で、<ruby>冬<rt>ふゆ</rt></ruby>の<ruby>大三角<rt>だいさんかく</rt></ruby>の<ruby>一<rt>ひと</rt></ruby>つです。',
@@ -725,7 +722,7 @@
         kanji: 'こいぬ座',
         season: 'winter',
         seasonLabel: 'ふゆ',
-        isRika: true,
+        isRika: false,
         ra: 7.65,
         dec: 6.0,
         myth: 'オリオンが<ruby>連<rt>つ</rt></ruby>れていたもう1<ruby>匹<rt>ぴき</rt></ruby>の<ruby>小<rt>ちい</rt></ruby>さな<ruby>犬<rt>いぬ</rt></ruby>の<ruby>星座<rt>せいざ</rt></ruby>。1<ruby>等星<rt>とうせい</rt></ruby>「プロキオン」は、おおいぬ<ruby>座<rt>ざ</rt></ruby>のシリウスより<ruby>少<rt>すこ</rt></ruby>し<ruby>早<rt>はや</rt></ruby>く<ruby>東<rt>ひがし</rt></ruby>の<ruby>空<rt>そら</rt></ruby>にのぼります。',
@@ -747,7 +744,7 @@
         kanji: 'ふたご座',
         season: 'winter',
         seasonLabel: 'ふゆ',
-        isRika: true,
+        isRika: false,
         ra: 7.10,
         dec: 24.0,
         myth: 'とても<ruby>仲良<rt>なかよ</rt></ruby>しの<ruby>双子<rt>ふたご</rt></ruby>の<ruby>兄弟<rt>きょうだい</rt></ruby>カストルとポルックス。<ruby>弟<rt>おとうと</rt></ruby>のポルックスが1<ruby>等星<rt>とうせい</rt></ruby>、<ruby>兄<rt>あに</rt></ruby>のカストルが2<ruby>等星<rt>とうせい</rt></ruby>として<ruby>肩<rt>かた</rt></ruby>を<ruby>並<rt>なら</rt></ruby>べて<ruby>輝<rt>かがや</rt></ruby>きます。',
@@ -1615,6 +1612,20 @@
       'pisces'
     ];
 
+    // 教科書タブに表示する10個の並び順
+    const RIKA_IDS = [
+      'cygnus',          // はくちょうざ
+      'lyra',            // ことざ
+      'aquila',          // わしざ
+      'summer_triangle', // 夏の大三角
+      'scorpius',        // さそりざ
+      'ursa_major',      // おおぐまざ
+      'ursa_minor',      // こぐまざ
+      'cassiopeia',      // カシオペヤ座
+      'orion',           // オリオン座
+      'winter_triangle'  // 冬の大三角
+    ];
+
     /**
      * 3. フリック＆連続タップひらがな入力テーブル
      */
@@ -1829,7 +1840,8 @@
       if (filter === 'all') {
         list = [...CONSTELLATIONS].sort((a, b) => (SEASON_ORDER[a.season] || 99) - (SEASON_ORDER[b.season] || 99));
       } else if (filter === 'rika') {
-        list = CONSTELLATIONS.filter(c => c.isRika).sort((a, b) => (SEASON_ORDER[a.season] || 99) - (SEASON_ORDER[b.season] || 99));
+        list = CONSTELLATIONS.filter(c => RIKA_IDS.includes(c.id))
+          .sort((a, b) => RIKA_IDS.indexOf(a.id) - RIKA_IDS.indexOf(b.id));
       } else if (filter === 'zodiac') {
         list = CONSTELLATIONS.filter(c => ZODIAC_IDS.includes(c.id))
           .sort((a, b) => ZODIAC_IDS.indexOf(a.id) - ZODIAC_IDS.indexOf(b.id));
